@@ -14,6 +14,7 @@ from linkedin_game_solver.games.queens.solver_heuristic import (
     solve_heuristic_lcv,
     solve_heuristic_simple,
 )
+from linkedin_game_solver.games.queens.solver_min_conflicts import solve_min_conflicts
 from linkedin_game_solver.games.queens.validator import validate_solution
 
 
@@ -70,6 +71,15 @@ def test_solve_dlx_example() -> None:
 def test_solve_csp_ac3_example() -> None:
     puzzle = parse_puzzle_file(Path("data/curated/queens/example_6x6.json"))
     result = solve_csp_ac3(puzzle)
+    assert result.solved, result.error
+    assert result.solution is not None
+    validation = validate_solution(puzzle, result.solution)
+    assert validation.ok, validation.reason
+
+
+def test_solve_min_conflicts_example() -> None:
+    puzzle = parse_puzzle_file(Path("data/curated/queens/example_6x6.json"))
+    result = solve_min_conflicts(puzzle, time_limit_s=0.2, max_steps=2000, restarts=5, seed=42)
     assert result.solved, result.error
     assert result.solution is not None
     validation = validate_solution(puzzle, result.solution)

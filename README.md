@@ -44,6 +44,12 @@ We implemented **DLX (Algorithm X with Dancing Links)** for Queens. It models
 row/col/region as exact-cover constraints, and adjacency as secondary columns.
 See the full explanation in `docs/dlx.md`.
 
+## Min-Conflicts Solver
+
+We also implemented **Min-Conflicts**, a local search solver with random
+restarts. It is fast on larger boards but not guaranteed. See
+`docs/min_conflicts.md`.
+
 ## Notes
 
 - This project is educational only. No live automation on LinkedIn.

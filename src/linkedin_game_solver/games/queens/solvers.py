@@ -10,6 +10,7 @@ from .solver_baseline import solve_baseline
 from .solver_csp import solve_csp_ac3
 from .solver_dlx import solve_dlx
 from .solver_heuristic import solve_heuristic_lcv, solve_heuristic_simple
+from .solver_min_conflicts import solve_min_conflicts
 
 QueensSolver = Callable[[QueensPuzzle, float | None], SolveResult]
 
@@ -19,6 +20,7 @@ _SOLVERS: dict[str, QueensSolver] = {
     "heuristic_lcv": solve_heuristic_lcv,
     "dlx": solve_dlx,
     "csp_ac3": solve_csp_ac3,
+    "min_conflicts": solve_min_conflicts,
 }
 
 
