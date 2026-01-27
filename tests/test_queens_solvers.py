@@ -8,6 +8,7 @@ from linkedin_game_solver.games.queens.parser import (
     parse_puzzle_file,
 )
 from linkedin_game_solver.games.queens.solver_baseline import solve_baseline
+from linkedin_game_solver.games.queens.solver_dlx import solve_dlx
 from linkedin_game_solver.games.queens.solver_heuristic import (
     solve_heuristic_lcv,
     solve_heuristic_simple,
@@ -50,6 +51,15 @@ def test_solve_heuristic_simple_example() -> None:
 def test_solve_heuristic_lcv_example() -> None:
     puzzle = parse_puzzle_file(Path("data/curated/queens/example_6x6.json"))
     result = solve_heuristic_lcv(puzzle)
+    assert result.solved, result.error
+    assert result.solution is not None
+    validation = validate_solution(puzzle, result.solution)
+    assert validation.ok, validation.reason
+
+
+def test_solve_dlx_example() -> None:
+    puzzle = parse_puzzle_file(Path("data/curated/queens/example_6x6.json"))
+    result = solve_dlx(puzzle)
     assert result.solved, result.error
     assert result.solution is not None
     validation = validate_solution(puzzle, result.solution)
