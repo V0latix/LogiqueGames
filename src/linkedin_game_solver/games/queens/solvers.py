@@ -7,6 +7,7 @@ from collections.abc import Callable
 from ...core.types import SolveResult
 from .parser import QueensPuzzle
 from .solver_baseline import solve_baseline
+from .solver_csp import solve_csp_ac3
 from .solver_dlx import solve_dlx
 from .solver_heuristic import solve_heuristic_lcv, solve_heuristic_simple
 
@@ -17,6 +18,7 @@ _SOLVERS: dict[str, QueensSolver] = {
     "heuristic_simple": solve_heuristic_simple,
     "heuristic_lcv": solve_heuristic_lcv,
     "dlx": solve_dlx,
+    "csp_ac3": solve_csp_ac3,
 }
 
 
