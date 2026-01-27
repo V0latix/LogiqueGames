@@ -8,7 +8,9 @@ import random
 from pathlib import Path
 
 from linkedin_game_solver.benchmarks.queens import available_algorithms, run_and_report
+from linkedin_game_solver.datasets.organize import organize_by_size
 from linkedin_game_solver.games.queens.generator import generate_puzzle_payload
+from linkedin_game_solver.games.queens.importers.samimsu import import_samimsu_dataset
 from linkedin_game_solver.games.queens.parser import parse_puzzle_dict
 from linkedin_game_solver.games.queens.renderer import render_solution
 from linkedin_game_solver.games.queens.solvers import get_solver
@@ -160,6 +162,40 @@ def _handle_generate_dataset(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_import_samimsu(args: argparse.Namespace) -> int:
+    stats = import_samimsu_dataset(
+        source_root=args.source,
+        outdir=args.outdir,
+        on_invalid=args.on_invalid,
+    )
+    print(
+        "Imported samimsu dataset:",
+        f"files={stats.total_files}",
+        f"imported={stats.imported}",
+        f"skipped={stats.skipped}",
+    )
+    return 0
+
+
+def _handle_organize_dataset(args: argparse.Namespace) -> int:
+    if args.game != "queens":
+        msg = "organize-dataset currently supports only --game queens."
+        raise ValueError(msg)
+
+    stats = organize_by_size(
+        input_dir=args.input,
+        output_dir=args.outdir,
+        mode=args.mode,
+    )
+    print(
+        "Organized dataset:",
+        f"files={stats.total_files}",
+        f"moved={stats.moved}",
+        f"skipped={stats.skipped}",
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="lgs", description="LinkedIn puzzle solver (educational).")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -274,6 +310,53 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum generation attempts per puzzle (default: count * 10).",
     )
 
+    import_samimsu = subparsers.add_parser(
+        "import-samimsu",
+        help="Import puzzles from the MIT-licensed samimsu/queens-game-linkedin repo.",
+    )
+    import_samimsu.add_argument(
+        "--source",
+        type=Path,
+        required=True,
+        help="Path to the cloned queens-game-linkedin repo.",
+    )
+    import_samimsu.add_argument(
+        "--outdir",
+        type=Path,
+        default=Path("data/imported/queens/samimsu"),
+        help="Directory to write imported puzzles.",
+    )
+    import_samimsu.add_argument(
+        "--on-invalid",
+        choices=["skip", "fail"],
+        default="skip",
+        help="Skip invalid puzzles or fail fast.",
+    )
+
+    organize_dataset = subparsers.add_parser(
+        "organize-dataset",
+        help="Organize a dataset into size_N folders.",
+    )
+    organize_dataset.add_argument("--game", default="queens", help="Game name (only queens supported).")
+    organize_dataset.add_argument(
+        "--input",
+        type=Path,
+        required=True,
+        help="Directory containing JSON puzzles.",
+    )
+    organize_dataset.add_argument(
+        "--outdir",
+        type=Path,
+        default=Path("data/imported/queens/samimsu_by_size"),
+        help="Output directory with size_N folders.",
+    )
+    organize_dataset.add_argument(
+        "--mode",
+        choices=["move", "copy"],
+        default="move",
+        help="Move or copy files into size folders.",
+    )
+
     return parser
 
 
@@ -292,6 +375,10 @@ def main(argv: list[str] | None = None) -> int:
             return _handle_bench(args)
         if args.command == "generate-dataset":
             return _handle_generate_dataset(args)
+        if args.command == "import-samimsu":
+            return _handle_import_samimsu(args)
+        if args.command == "organize-dataset":
+            return _handle_organize_dataset(args)
     except ValueError as exc:
         parser.error(str(exc))
 
