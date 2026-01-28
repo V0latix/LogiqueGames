@@ -80,13 +80,14 @@ def _handle_bench(args: argparse.Namespace) -> int:
         raise ValueError(msg)
 
     rows, _report = run_and_report(
-        dataset_dir=args.dataset,
+        dataset=args.dataset,
         algo_csv=args.algo,
         report_path=args.report,
         limit=args.limit,
         recursive=args.recursive,
         top_k=args.top_k,
         time_limit_s=args.timelimit,
+        runs_out=args.runs_out,
     )
     print(f"Benchmarked {len(rows)} runs across dataset: {args.dataset}")
     print(f"Report written to: {args.report}")
@@ -244,7 +245,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     bench = subparsers.add_parser("bench", help="Benchmark algorithms on a dataset.")
     bench.add_argument("--game", required=True, help="Game name (e.g., queens).")
-    bench.add_argument("--dataset", required=True, type=Path, help="Directory of puzzles.")
+    bench.add_argument(
+        "--dataset",
+        required=True,
+        type=Path,
+        help="Directory or manifest JSON. For multiple, pass comma-separated paths.",
+    )
     bench.add_argument(
         "--algo",
         required=True,
@@ -276,8 +282,14 @@ def build_parser() -> argparse.ArgumentParser:
     bench.add_argument(
         "--timelimit",
         type=float,
+        default=1.0,
+        help="Time limit per puzzle in seconds (default: 1.0).",
+    )
+    bench.add_argument(
+        "--runs-out",
+        type=Path,
         default=None,
-        help="Time limit per puzzle in seconds (e.g., 0.5).",
+        help="Write per-run results to a JSONL file.",
     )
 
     generate_solve = subparsers.add_parser(

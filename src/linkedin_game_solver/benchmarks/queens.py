@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +27,8 @@ class BenchRow:
     solved: bool
     metrics: SolveMetrics
     error: str | None
+    n: int
+    source: str
 
 
 @dataclass
@@ -63,26 +67,31 @@ def _median(values: list[float]) -> float:
     return float((ordered[mid - 1] + ordered[mid]) / 2.0)
 
 
-def _load_puzzles(dataset_dir: Path, limit: int | None) -> list[tuple[str, QueensPuzzle]]:
+def _load_puzzles_from_manifest(path: Path, limit: int | None) -> list[tuple[str, QueensPuzzle, str]]:
+    puzzles: list[tuple[str, QueensPuzzle, str]] = []
+    entries = load_manifest(path)
+    if limit is not None:
+        entries = entries[:limit]
+    for entry in entries:
+        payload = {
+            "game": "queens",
+            "n": entry["n"],
+            "regions": entry["regions"],
+            "givens": entry.get("givens", {"queens": [], "blocked": []}),
+        }
+        puzzle = parse_puzzle_dict(payload)
+        puzzle_id = f"manifest_{entry['id']}"
+        source = entry.get("source", "unknown")
+        puzzles.append((puzzle_id, puzzle, source))
+    if not puzzles:
+        msg = f"No puzzles found in manifest: {path}"
+        raise ValueError(msg)
+    return puzzles
+
+
+def _load_puzzles(dataset_dir: Path, limit: int | None) -> list[tuple[str, QueensPuzzle, str]]:
     if dataset_dir.is_file():
-        puzzles = []
-        entries = load_manifest(dataset_dir)
-        if limit is not None:
-            entries = entries[:limit]
-        for entry in entries:
-            payload = {
-                "game": "queens",
-                "n": entry["n"],
-                "regions": entry["regions"],
-                "givens": entry.get("givens", {"queens": [], "blocked": []}),
-            }
-            puzzle = parse_puzzle_dict(payload)
-            puzzle_id = f"manifest_{entry['id']}"
-            puzzles.append((puzzle_id, puzzle))
-        if not puzzles:
-            msg = f"No puzzles found in manifest: {dataset_dir}"
-            raise ValueError(msg)
-        return puzzles
+        return _load_puzzles_from_manifest(dataset_dir, limit=limit)
 
     if not dataset_dir.exists():
         msg = f"Dataset directory does not exist: {dataset_dir}"
@@ -95,22 +104,22 @@ def _load_puzzles(dataset_dir: Path, limit: int | None) -> list[tuple[str, Queen
         msg = f"No puzzle JSON files found in {dataset_dir}"
         raise ValueError(msg)
 
-    puzzles: list[tuple[str, QueensPuzzle]] = []
+    puzzles: list[tuple[str, QueensPuzzle, str]] = []
     for path in paths:
         puzzle = parse_puzzle_file(path)
-        puzzles.append((_puzzle_id_from_path(path), puzzle))
+        puzzles.append((_puzzle_id_from_path(path), puzzle, "unknown"))
     return puzzles
 
 
 def _load_puzzles_recursive(
     dataset_dir: Path,
     limit: int | None,
-) -> dict[str, list[tuple[str, QueensPuzzle]]]:
+) -> dict[str, list[tuple[str, QueensPuzzle, str]]]:
     if dataset_dir.is_file():
         entries = load_manifest(dataset_dir)
         if limit is not None:
             entries = entries[:limit]
-        grouped: dict[str, list[tuple[str, QueensPuzzle]]] = defaultdict(list)
+        grouped: dict[str, list[tuple[str, QueensPuzzle, str]]] = defaultdict(list)
         for entry in entries:
             payload = {
                 "game": "queens",
@@ -121,7 +130,8 @@ def _load_puzzles_recursive(
             puzzle = parse_puzzle_dict(payload)
             size_key = f"size_{entry['n']}"
             puzzle_id = f"manifest_{entry['id']}"
-            grouped[size_key].append((puzzle_id, puzzle))
+            source = entry.get("source", "unknown")
+            grouped[size_key].append((puzzle_id, puzzle, source))
         if not grouped:
             msg = f"No puzzles found in manifest: {dataset_dir}"
             raise ValueError(msg)
@@ -136,24 +146,30 @@ def _load_puzzles_recursive(
         msg = f"No size_* directories found under {dataset_dir}"
         raise ValueError(msg)
 
-    grouped: dict[str, list[tuple[str, QueensPuzzle]]] = {}
+    grouped: dict[str, list[tuple[str, QueensPuzzle, str]]] = {}
     for size_dir in size_dirs:
         size_key = size_dir.name
         grouped[size_key] = _load_puzzles(size_dir, limit=limit)
     return grouped
 
 
+def _parse_dataset_paths(raw: str | Path) -> list[Path]:
+    raw_str = str(raw)
+    parts = [part.strip() for part in raw_str.split(",") if part.strip()]
+    return [Path(part) for part in parts]
+
+
 def run_benchmark(
-    dataset_dir: Path,
+    dataset_path: Path,
     algo_csv: str,
     limit: int | None = None,
     time_limit_s: float | None = None,
 ) -> list[BenchRow]:
     algo_names = _parse_algo_list(algo_csv)
-    puzzles = _load_puzzles(dataset_dir, limit=limit)
+    puzzles = _load_puzzles(dataset_path, limit=limit)
 
     rows: list[BenchRow] = []
-    for puzzle_id, puzzle in puzzles:
+    for puzzle_id, puzzle, source in puzzles:
         for algo in algo_names:
             solver = get_solver(algo)
             result = solver(puzzle, time_limit_s=time_limit_s)
@@ -164,8 +180,22 @@ def run_benchmark(
                     solved=result.solved,
                     metrics=result.metrics,
                     error=result.error,
+                    n=puzzle.n,
+                    source=source,
                 )
             )
+    return rows
+
+
+def run_benchmark_multi(
+    dataset_paths: Iterable[Path],
+    algo_csv: str,
+    limit: int | None = None,
+    time_limit_s: float | None = None,
+) -> list[BenchRow]:
+    rows: list[BenchRow] = []
+    for path in dataset_paths:
+        rows.extend(run_benchmark(path, algo_csv, limit=limit, time_limit_s=time_limit_s))
     return rows
 
 
@@ -266,6 +296,7 @@ def _top_k_section(rows: list[BenchRow], k: int) -> str:
     lines.append("```")
     return "\n".join(lines)
 
+
 def _timeouts_section(rows: list[BenchRow]) -> str:
     timeouts: dict[str, int] = defaultdict(int)
     totals: dict[str, int] = defaultdict(int)
@@ -287,9 +318,10 @@ def _timeouts_section(rows: list[BenchRow]) -> str:
     lines.append("```")
     return "\n".join(lines)
 
+
 def build_report(
     rows: list[BenchRow],
-    dataset_dir: Path,
+    dataset_label: str,
     top_k: int = 3,
     time_limit_s: float | None = None,
 ) -> str:
@@ -303,7 +335,7 @@ def build_report(
         "# Queens Benchmark Report",
         "",
         f"- Generated: {now}",
-        f"- Dataset: `{dataset_dir}`",
+        f"- Dataset: `{dataset_label}`",
         f"- Algorithms: {', '.join(item.algo for item in summaries)}",
         f"- Time limit: {time_limit_s}s" if time_limit_s is not None else "- Time limit: none",
         "",
@@ -345,7 +377,7 @@ def _section_title(name: str) -> str:
 
 def build_report_recursive(
     grouped_rows: dict[str, list[BenchRow]],
-    dataset_dir: Path,
+    dataset_label: str,
     top_k: int = 3,
     time_limit_s: float | None = None,
 ) -> str:
@@ -357,7 +389,7 @@ def build_report_recursive(
         "# Queens Benchmark Report (Recursive)",
         "",
         f"- Generated: {now}",
-        f"- Dataset root: `{dataset_dir}`",
+        f"- Dataset root: `{dataset_label}`",
         f"- Algorithms: {', '.join(all_algos)}",
         f"- Time limit: {time_limit_s}s" if time_limit_s is not None else "- Time limit: none",
         "",
@@ -368,17 +400,18 @@ def build_report_recursive(
 
     for size_key in sorted(grouped_rows):
         size_rows = grouped_rows[size_key]
+        summaries = _summarize(size_rows)
         sections.extend(
             [
                 "",
                 _section_title(size_key),
                 "",
-                _summary_table(_summarize(size_rows)),
+                _summary_table(summaries),
             ]
         )
 
-        avg_time_pairs = [(item.algo, item.avg_time_ms) for item in _summarize(size_rows)]
-        avg_node_pairs = [(item.algo, item.avg_nodes) for item in _summarize(size_rows)]
+        avg_time_pairs = [(item.algo, item.avg_time_ms) for item in summaries]
+        avg_node_pairs = [(item.algo, item.avg_nodes) for item in summaries]
         sections.extend(
             [
                 "",
@@ -405,58 +438,77 @@ def build_report_recursive(
     return "\n".join(sections)
 
 
+def _write_runs_jsonl(rows: list[BenchRow], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as handle:
+        for idx, row in enumerate(rows, start=1):
+            record = {
+                "id": idx,
+                "puzzle_id": row.puzzle_id,
+                "n": row.n,
+                "algo": row.algo,
+                "solved": row.solved,
+                "time_ms": row.metrics.time_ms,
+                "nodes": row.metrics.nodes,
+                "backtracks": row.metrics.backtracks,
+                "timeout": bool(row.error and "timeout" in row.error.lower()),
+                "source": row.source,
+            }
+            handle.write(json.dumps(record, separators=(",", ":")) + "\n")
+
+
 def run_and_report(
-    dataset_dir: Path,
+    dataset: str | Path,
     algo_csv: str,
     report_path: Path,
     limit: int | None = None,
     recursive: bool = False,
     top_k: int = 3,
     time_limit_s: float | None = None,
+    runs_out: Path | None = None,
 ) -> tuple[list[BenchRow], str]:
+    dataset_paths = _parse_dataset_paths(dataset)
+
     if recursive:
-        grouped_puzzles = _load_puzzles_recursive(dataset_dir, limit=limit)
-        grouped_rows: dict[str, list[BenchRow]] = {}
-        for size_key, puzzles in grouped_puzzles.items():
-            rows: list[BenchRow] = []
-            algo_names = _parse_algo_list(algo_csv)
-            for puzzle_id, puzzle in puzzles:
-                for algo in algo_names:
-                    solver = get_solver(algo)
-                    result = solver(puzzle, time_limit_s=time_limit_s)
-                    rows.append(
-                        BenchRow(
-                            puzzle_id=f"{size_key}/{puzzle_id}",
-                            algo=algo,
-                            solved=result.solved,
-                            metrics=result.metrics,
-                            error=result.error,
+        grouped_rows: dict[str, list[BenchRow]] = defaultdict(list)
+        for path in dataset_paths:
+            grouped_puzzles = _load_puzzles_recursive(path, limit=limit)
+            for size_key, puzzles in grouped_puzzles.items():
+                rows: list[BenchRow] = []
+                algo_names = _parse_algo_list(algo_csv)
+                for puzzle_id, puzzle, source in puzzles:
+                    for algo in algo_names:
+                        solver = get_solver(algo)
+                        result = solver(puzzle, time_limit_s=time_limit_s)
+                        rows.append(
+                            BenchRow(
+                                puzzle_id=f"{size_key}/{puzzle_id}",
+                                algo=algo,
+                                solved=result.solved,
+                                metrics=result.metrics,
+                                error=result.error,
+                                n=puzzle.n,
+                                source=source,
+                            )
                         )
-                    )
-            grouped_rows[size_key] = rows
-        report = build_report_recursive(
-            grouped_rows,
-            dataset_dir=dataset_dir,
-            top_k=top_k,
-            time_limit_s=time_limit_s,
-        )
+                grouped_rows[size_key].extend(rows)
+        report = build_report_recursive(grouped_rows, dataset_label=dataset, top_k=top_k, time_limit_s=time_limit_s)
         all_rows = [row for rows in grouped_rows.values() for row in rows]
     else:
-        all_rows = run_benchmark(
-            dataset_dir=dataset_dir,
-            algo_csv=algo_csv,
+        all_rows = run_benchmark_multi(
+            dataset_paths,
+            algo_csv,
             limit=limit,
             time_limit_s=time_limit_s,
         )
-        report = build_report(
-            all_rows,
-            dataset_dir=dataset_dir,
-            top_k=top_k,
-            time_limit_s=time_limit_s,
-        )
+        report = build_report(all_rows, dataset_label=dataset, top_k=top_k, time_limit_s=time_limit_s)
 
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report, encoding="utf-8")
+
+    if runs_out is not None:
+        _write_runs_jsonl(all_rows, runs_out)
+
     return all_rows, report
 
 
