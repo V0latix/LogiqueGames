@@ -73,7 +73,12 @@ def _handle_generate_solve(args: argparse.Namespace) -> int:
         raise ValueError(msg)
 
     solver = _resolve_queens_solver(args.algo)
-    payload, known_solution = generate_puzzle_payload(n=args.n, seed=args.seed)
+    payload, known_solution = generate_puzzle_payload(
+        n=args.n,
+        seed=args.seed,
+        ensure_unique=True,
+        max_attempts=args.max_attempts or 50,
+    )
     puzzle = parse_puzzle_dict(payload)
     result = solver(puzzle)
 
@@ -184,7 +189,12 @@ def _handle_generate_dataset(args: argparse.Namespace) -> int:
             attempts = 0
             while attempts < max_attempts:
                 seed_value, seed_cursor = _next_seed(rng, seed_cursor)
-                payload, _known_solution = generate_puzzle_payload(n=n, seed=seed_value)
+                payload, _known_solution = generate_puzzle_payload(
+                    n=n,
+                    seed=seed_value,
+                    ensure_unique=True,
+                    max_attempts=1,
+                )
                 puzzle = parse_puzzle_dict(payload)
                 result = solver(puzzle)
 
@@ -291,6 +301,29 @@ def _handle_mark_unique(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_fill_runs(args: argparse.Namespace) -> int:
+    import subprocess
+    import sys
+
+    cmd = [
+        sys.executable,
+        "scripts/fill_runs.py",
+        "--manifest",
+        args.manifest,
+        "--runs",
+        str(args.runs),
+        "--timelimit",
+        str(args.timelimit),
+    ]
+    if args.algos:
+        cmd.extend(["--algos", args.algos])
+    if args.limit is not None:
+        cmd.extend(["--limit", str(args.limit)])
+
+    completed = subprocess.run(cmd, check=False)
+    return completed.returncode
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="lgs", description="LinkedIn puzzle solver (educational).")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -376,6 +409,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Solver to use (queens): " + ", ".join(available_algorithms()) + ".",
     )
     generate_solve.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility.")
+    generate_solve.add_argument(
+        "--max-attempts",
+        type=int,
+        default=50,
+        help="Max attempts to generate a unique puzzle (default: 50).",
+    )
     generate_solve.add_argument(
         "--outdir",
         type=Path,
@@ -542,6 +581,39 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional time limit per puzzle in seconds.",
     )
 
+    fill_runs_cmd = subparsers.add_parser(
+        "fill-runs",
+        help="Append missing benchmark runs to a JSONL file.",
+    )
+    fill_runs_cmd.add_argument(
+        "--manifest",
+        required=True,
+        help="Comma-separated manifest paths (e.g., data/puzzles.json,data/puzzles_generated.json).",
+    )
+    fill_runs_cmd.add_argument(
+        "--runs",
+        type=Path,
+        default=Path("data/benchmarks/queens_runs.jsonl"),
+        help="Runs JSONL file to update.",
+    )
+    fill_runs_cmd.add_argument(
+        "--algos",
+        default=None,
+        help="Comma-separated list of algorithms (default: all).",
+    )
+    fill_runs_cmd.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Optional limit on puzzles to consider (first N per manifest).",
+    )
+    fill_runs_cmd.add_argument(
+        "--timelimit",
+        type=float,
+        default=1.0,
+        help="Time limit per puzzle in seconds (default: 1.0).",
+    )
+
     return parser
 
 
@@ -570,6 +642,8 @@ def main(argv: list[str] | None = None) -> int:
             return _handle_normalize_dataset(args)
         if args.command == "mark-unique":
             return _handle_mark_unique(args)
+        if args.command == "fill-runs":
+            return _handle_fill_runs(args)
     except ValueError as exc:
         parser.error(str(exc))
 

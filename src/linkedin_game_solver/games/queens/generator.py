@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from .parser import Cell, Grid, QueensPuzzle, QueensSolution, parse_puzzle_dict
+from .solver_dlx import count_solutions_dlx
 from .validator import validate_solution
 
 
@@ -139,9 +140,7 @@ def generate_regions_from_solution(
     return region_by_cell
 
 
-def generate_puzzle_payload(n: int, seed: int | None = None) -> tuple[dict, QueensSolution]:
-    """Generate a puzzle JSON payload plus its known-valid solution."""
-
+def _generate_payload_once(n: int, seed: int | None) -> tuple[dict, QueensSolution]:
     solution = generate_solution(n, seed=seed)
     regions = generate_regions_from_solution(solution, seed=seed)
     payload = {
@@ -153,10 +152,83 @@ def generate_puzzle_payload(n: int, seed: int | None = None) -> tuple[dict, Quee
     return payload, solution
 
 
-def generate_puzzle(n: int, seed: int | None = None) -> GeneratedPuzzle:
+def _is_unique_payload(payload: dict, time_limit_s: float | None) -> bool:
+    puzzle = parse_puzzle_dict(payload)
+    count = count_solutions_dlx(puzzle, limit=2, time_limit_s=time_limit_s)
+    return count == 1
+
+
+def _with_givens(payload: dict, givens: list[Cell]) -> dict:
+    return {
+        "game": payload["game"],
+        "n": payload["n"],
+        "regions": payload["regions"],
+        "givens": {
+            "queens": [[r, c] for r, c in givens],
+            "blocked": [],
+        },
+    }
+
+
+def generate_puzzle_payload(
+    n: int,
+    seed: int | None = None,
+    ensure_unique: bool = True,
+    max_attempts: int = 50,
+    time_limit_s: float | None = None,
+) -> tuple[dict, QueensSolution]:
+    """Generate a puzzle JSON payload plus its known-valid solution.
+
+    When ensure_unique=True, the generator retries until the puzzle has exactly
+    one solution (checked by DLX up to 2 solutions).
+    """
+
+    if max_attempts <= 0:
+        msg = "max_attempts must be positive"
+        raise ValueError(msg)
+
+    rng = random.Random(seed)
+
+    for attempt in range(max_attempts):
+        attempt_seed = rng.randint(0, 10_000_000) if seed is None else seed + attempt
+
+        base_payload, solution = _generate_payload_once(n, seed=attempt_seed)
+        if not ensure_unique:
+            return base_payload, solution
+
+        payload = _with_givens(base_payload, [])
+        if _is_unique_payload(payload, time_limit_s):
+            return payload, solution
+
+        positions = solution.positions()
+        rng.shuffle(positions)
+        givens: list[Cell] = []
+        for pos in positions:
+            givens.append(pos)
+            payload = _with_givens(base_payload, givens)
+            if _is_unique_payload(payload, time_limit_s):
+                return payload, solution
+
+    msg = f"Unable to generate a unique puzzle for n={n} after {max_attempts} attempts"
+    raise ValueError(msg)
+
+
+def generate_puzzle(
+    n: int,
+    seed: int | None = None,
+    ensure_unique: bool = True,
+    max_attempts: int = 50,
+    time_limit_s: float | None = None,
+) -> GeneratedPuzzle:
     """Generate a parsed puzzle along with its known-valid solution."""
 
-    payload, solution = generate_puzzle_payload(n, seed=seed)
+    payload, solution = generate_puzzle_payload(
+        n,
+        seed=seed,
+        ensure_unique=ensure_unique,
+        max_attempts=max_attempts,
+        time_limit_s=time_limit_s,
+    )
     puzzle = parse_puzzle_dict(payload)
     validation = validate_solution(puzzle, solution)
     if not validation.ok:
