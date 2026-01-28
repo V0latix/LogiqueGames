@@ -9,7 +9,12 @@ from pathlib import Path
 from statistics import mean
 
 from linkedin_game_solver.core.types import SolveMetrics
-from linkedin_game_solver.games.queens.parser import QueensPuzzle, parse_puzzle_file
+from linkedin_game_solver.datasets.exporter import load_manifest
+from linkedin_game_solver.games.queens.parser import (
+    QueensPuzzle,
+    parse_puzzle_dict,
+    parse_puzzle_file,
+)
 from linkedin_game_solver.games.queens.solvers import get_solver, list_solvers
 
 
@@ -59,6 +64,26 @@ def _median(values: list[float]) -> float:
 
 
 def _load_puzzles(dataset_dir: Path, limit: int | None) -> list[tuple[str, QueensPuzzle]]:
+    if dataset_dir.is_file():
+        puzzles = []
+        entries = load_manifest(dataset_dir)
+        if limit is not None:
+            entries = entries[:limit]
+        for entry in entries:
+            payload = {
+                "game": "queens",
+                "n": entry["n"],
+                "regions": entry["regions"],
+                "givens": entry.get("givens", {"queens": [], "blocked": []}),
+            }
+            puzzle = parse_puzzle_dict(payload)
+            puzzle_id = f"manifest_{entry['id']}"
+            puzzles.append((puzzle_id, puzzle))
+        if not puzzles:
+            msg = f"No puzzles found in manifest: {dataset_dir}"
+            raise ValueError(msg)
+        return puzzles
+
     if not dataset_dir.exists():
         msg = f"Dataset directory does not exist: {dataset_dir}"
         raise ValueError(msg)
@@ -81,6 +106,27 @@ def _load_puzzles_recursive(
     dataset_dir: Path,
     limit: int | None,
 ) -> dict[str, list[tuple[str, QueensPuzzle]]]:
+    if dataset_dir.is_file():
+        entries = load_manifest(dataset_dir)
+        if limit is not None:
+            entries = entries[:limit]
+        grouped: dict[str, list[tuple[str, QueensPuzzle]]] = defaultdict(list)
+        for entry in entries:
+            payload = {
+                "game": "queens",
+                "n": entry["n"],
+                "regions": entry["regions"],
+                "givens": entry.get("givens", {"queens": [], "blocked": []}),
+            }
+            puzzle = parse_puzzle_dict(payload)
+            size_key = f"size_{entry['n']}"
+            puzzle_id = f"manifest_{entry['id']}"
+            grouped[size_key].append((puzzle_id, puzzle))
+        if not grouped:
+            msg = f"No puzzles found in manifest: {dataset_dir}"
+            raise ValueError(msg)
+        return grouped
+
     if not dataset_dir.exists():
         msg = f"Dataset directory does not exist: {dataset_dir}"
         raise ValueError(msg)

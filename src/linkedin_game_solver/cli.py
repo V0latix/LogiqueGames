@@ -8,6 +8,8 @@ import random
 from pathlib import Path
 
 from linkedin_game_solver.benchmarks.queens import available_algorithms, run_and_report
+from linkedin_game_solver.datasets.exporter import export_dataset
+from linkedin_game_solver.datasets.normalize import normalize_dataset
 from linkedin_game_solver.datasets.organize import organize_by_size
 from linkedin_game_solver.games.queens.generator import generate_puzzle_payload
 from linkedin_game_solver.games.queens.importers.samimsu import import_samimsu_dataset
@@ -196,6 +198,38 @@ def _handle_organize_dataset(args: argparse.Namespace) -> int:
     return 0
 
 
+def _handle_export_dataset(args: argparse.Namespace) -> int:
+    stats = export_dataset(
+        input_dir=args.input,
+        output_path=args.out,
+        source=args.source,
+        allow_duplicates=args.allow_duplicates,
+    )
+    print(
+        "Exported dataset:",
+        f"files={stats.total_files}",
+        f"exported={stats.exported}",
+        f"skipped={stats.skipped}",
+        f"output={args.out}",
+    )
+    return 0
+
+
+def _handle_normalize_dataset(args: argparse.Namespace) -> int:
+    stats = normalize_dataset(
+        input_path=args.input,
+        output_path=args.out,
+    )
+    print(
+        "Normalized dataset:",
+        f"total={stats.total}",
+        f"converted={stats.converted}",
+        f"unchanged={stats.unchanged}",
+        f"skipped={stats.skipped}",
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="lgs", description="LinkedIn puzzle solver (educational).")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -357,6 +391,50 @@ def build_parser() -> argparse.ArgumentParser:
         help="Move or copy files into size folders.",
     )
 
+    export_dataset_cmd = subparsers.add_parser(
+        "export-dataset",
+        help="Export many JSON puzzles into a single manifest.",
+    )
+    export_dataset_cmd.add_argument(
+        "--input",
+        type=Path,
+        required=True,
+        help="Directory containing JSON puzzles (recursive).",
+    )
+    export_dataset_cmd.add_argument(
+        "--out",
+        type=Path,
+        default=Path("data/puzzles.json"),
+        help="Path to the manifest JSON output.",
+    )
+    export_dataset_cmd.add_argument(
+        "--source",
+        default="imported",
+        help="Source label stored in the manifest (e.g., imported, generated).",
+    )
+    export_dataset_cmd.add_argument(
+        "--allow-duplicates",
+        action="store_true",
+        help="Allow duplicate puzzles (otherwise duplicates are skipped).",
+    )
+
+    normalize_dataset_cmd = subparsers.add_parser(
+        "normalize-dataset",
+        help="Normalize regions to matrix format (in-place by default).",
+    )
+    normalize_dataset_cmd.add_argument(
+        "--input",
+        type=Path,
+        required=True,
+        help="Input JSON file or directory.",
+    )
+    normalize_dataset_cmd.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Output JSON file (default: in-place).",
+    )
+
     return parser
 
 
@@ -379,6 +457,10 @@ def main(argv: list[str] | None = None) -> int:
             return _handle_import_samimsu(args)
         if args.command == "organize-dataset":
             return _handle_organize_dataset(args)
+        if args.command == "export-dataset":
+            return _handle_export_dataset(args)
+        if args.command == "normalize-dataset":
+            return _handle_normalize_dataset(args)
     except ValueError as exc:
         parser.error(str(exc))
 
