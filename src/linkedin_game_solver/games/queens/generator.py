@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from .parser import Cell, Grid, QueensPuzzle, QueensSolution, parse_puzzle_dict
 from .solver_dlx import count_solutions_dlx
+from .solvers import get_solver
 from .validator import validate_solution
 
 
@@ -82,6 +83,7 @@ def _neighbors4(n: int, r: int, c: int) -> list[Cell]:
 def generate_regions_from_solution(
     solution: QueensSolution,
     seed: int | None = None,
+    mode: str = "balanced",
 ) -> Grid:
     """Build a region partition compatible with the given solution.
 
@@ -100,11 +102,21 @@ def generate_regions_from_solution(
     region_by_cell: list[list[int]] = [[-1 for _ in range(n)] for _ in range(n)]
     frontiers: dict[int, set[Cell]] = {}
     region_sizes: dict[int, int] = {}
+    region_rows: dict[int, set[int]] = {}
+    region_cols: dict[int, set[int]] = {}
+    region_seed: dict[int, Cell] = {}
+    last_step: dict[int, tuple[int, int] | None] = {}
+    last_cell: dict[int, Cell] = {}
 
     for region_id, (r, c) in enumerate(sorted(positions)):
         region_by_cell[r][c] = region_id
         frontiers[region_id] = set(_neighbors4(n, r, c))
         region_sizes[region_id] = 1
+        region_rows[region_id] = {r}
+        region_cols[region_id] = {c}
+        region_seed[region_id] = (r, c)
+        last_step[region_id] = None
+        last_cell[region_id] = (r, c)
 
     unassigned = {(r, c) for r in range(n) for c in range(n) if region_by_cell[r][c] < 0}
 
@@ -121,6 +133,11 @@ def generate_regions_from_solution(
             region_sizes[best_region] += 1
             unassigned.remove((r, c))
             frontiers[best_region].update(_neighbors4(n, r, c))
+            region_rows[best_region].add(r)
+            region_cols[best_region].add(c)
+            prev_r, prev_c = last_cell[best_region]
+            last_step[best_region] = (r - prev_r, c - prev_c)
+            last_cell[best_region] = (r, c)
             continue
 
         # Prefer smaller regions to keep the partition reasonably balanced.
@@ -130,19 +147,53 @@ def generate_regions_from_solution(
 
         candidates = list(frontiers[region_id] & unassigned)
         rng.shuffle(candidates)
+
+        if mode == "serpentine":
+            candidates.sort(key=lambda cell: (cell[0], cell[1] if cell[0] % 2 == 0 else -cell[1]))
+        elif mode == "biased":
+            preferred = last_step.get(region_id)
+            prev = last_cell.get(region_id)
+            if preferred is not None and prev is not None:
+                pr, pc = preferred
+                prev_r, prev_c = prev
+                candidates.sort(
+                    key=lambda cell: 0 if (cell[0] - prev_r, cell[1] - prev_c) == (pr, pc) else 1
+                )
+        elif mode == "constrained":
+            seed_r, seed_c = region_seed[region_id]
+            rows = region_rows[region_id]
+            cols = region_cols[region_id]
+            candidates.sort(
+                key=lambda cell: (
+                    abs(cell[0] - seed_r) + abs(cell[1] - seed_c),
+                    len(rows | {cell[0]}) + len(cols | {cell[1]}),
+                    cell[0],
+                    cell[1],
+                )
+            )
+
         r, c = candidates[0]
 
         region_by_cell[r][c] = region_id
         region_sizes[region_id] += 1
         unassigned.remove((r, c))
         frontiers[region_id].update(_neighbors4(n, r, c))
+        region_rows[region_id].add(r)
+        region_cols[region_id].add(c)
+        prev_r, prev_c = last_cell[region_id]
+        last_step[region_id] = (r - prev_r, c - prev_c)
+        last_cell[region_id] = (r, c)
 
     return region_by_cell
 
 
-def _generate_payload_once(n: int, seed: int | None) -> tuple[dict, QueensSolution]:
+def _generate_payload_once(
+    n: int,
+    seed: int | None,
+    region_mode: str,
+) -> tuple[dict, QueensSolution]:
     solution = generate_solution(n, seed=seed)
-    regions = generate_regions_from_solution(solution, seed=seed)
+    regions = generate_regions_from_solution(solution, seed=seed, mode=region_mode)
     payload = {
         "game": "queens",
         "n": n,
@@ -152,64 +203,118 @@ def _generate_payload_once(n: int, seed: int | None) -> tuple[dict, QueensSoluti
     return payload, solution
 
 
+def _resolve_region_mode(region_mode: str, attempt: int) -> str:
+    if region_mode == "mixed":
+        modes = ("balanced", "biased", "serpentine", "constrained")
+        return modes[attempt % len(modes)]
+    return region_mode
+
+
 def _is_unique_payload(payload: dict, time_limit_s: float | None) -> bool:
     puzzle = parse_puzzle_dict(payload)
     count = count_solutions_dlx(puzzle, limit=2, time_limit_s=time_limit_s)
     return count == 1
 
 
-def _with_givens(payload: dict, givens: list[Cell]) -> dict:
-    return {
-        "game": payload["game"],
-        "n": payload["n"],
-        "regions": payload["regions"],
-        "givens": {
-            "queens": [[r, c] for r, c in givens],
-            "blocked": [],
-        },
-    }
-
-
 def generate_puzzle_payload(
     n: int,
     seed: int | None = None,
     ensure_unique: bool = True,
-    max_attempts: int = 50,
+    max_attempts: int | None = 50,
     time_limit_s: float | None = None,
+    region_mode: str = "balanced",
+    selection_mode: str = "first",
+    candidates: int = 20,
+    score_algo: str = "heuristic_lcv",
+    search_until_unique: bool = False,
+    progress_every: int | None = None,
+    fast_unique: bool = False,
+    fast_unique_timelimit_s: float = 0.5,
 ) -> tuple[dict, QueensSolution]:
     """Generate a puzzle JSON payload plus its known-valid solution.
 
-    When ensure_unique=True, the generator retries until the puzzle has exactly
-    one solution (checked by DLX up to 2 solutions).
+    Strategy: solution-first (place all queens), then build connected regions
+    by multi-source flood fill seeded at the queens. When ensure_unique=True,
+    the generator retries until the puzzle has exactly one solution (checked
+    by DLX up to 2 solutions).
     """
 
-    if max_attempts <= 0:
+    if max_attempts is not None and max_attempts <= 0:
         msg = "max_attempts must be positive"
         raise ValueError(msg)
 
     rng = random.Random(seed)
 
-    for attempt in range(max_attempts):
+    if selection_mode not in {"first", "best"}:
+        msg = f"unknown selection_mode={selection_mode!r}"
+        raise ValueError(msg)
+    if region_mode not in {"balanced", "biased", "serpentine", "constrained", "mixed"}:
+        msg = f"unknown region_mode={region_mode!r}"
+        raise ValueError(msg)
+
+    if selection_mode == "best":
+        solver = get_solver(score_algo)
+        best_score = -1.0
+        best_payload: dict | None = None
+        best_solution: QueensSolution | None = None
+
+        attempts = 0
+        while max_attempts is None or attempts < max_attempts:
+            for _ in range(candidates):
+                attempt_seed = rng.randint(0, 10_000_000) if seed is None else seed + attempts
+                mode = _resolve_region_mode(region_mode, attempts)
+                payload, solution = _generate_payload_once(n, seed=attempt_seed, region_mode=mode)
+                attempts += 1
+                if progress_every and attempts % progress_every == 0:
+                    print(
+                        f"[generator] tried {attempts} candidates "
+                        f"(mode=best, region={region_mode}, unique={ensure_unique})"
+                    )
+
+                if ensure_unique:
+                    if fast_unique and not _is_unique_payload(payload, fast_unique_timelimit_s):
+                        continue
+                    if not _is_unique_payload(payload, time_limit_s):
+                        continue
+
+                puzzle = parse_puzzle_dict(payload)
+                result = solver(puzzle, time_limit_s=time_limit_s)
+                score = float(result.metrics.nodes) + float(result.metrics.backtracks)
+                if score > best_score:
+                    best_score = score
+                    best_payload = payload
+                    best_solution = solution
+
+            if best_payload is not None and best_solution is not None:
+                return best_payload, best_solution
+
+            if not search_until_unique:
+                msg = f"Unable to generate a unique puzzle for n={n} after {attempts} candidates"
+                raise ValueError(msg)
+
+        msg = f"Unable to generate a unique puzzle for n={n} after {attempts} candidates"
+        raise ValueError(msg)
+
+    attempt = 0
+    while max_attempts is None or attempt < max_attempts:
         attempt_seed = rng.randint(0, 10_000_000) if seed is None else seed + attempt
-
-        base_payload, solution = _generate_payload_once(n, seed=attempt_seed)
-        if not ensure_unique:
-            return base_payload, solution
-
-        payload = _with_givens(base_payload, [])
-        if _is_unique_payload(payload, time_limit_s):
+        mode = _resolve_region_mode(region_mode, attempt)
+        payload, solution = _generate_payload_once(n, seed=attempt_seed, region_mode=mode)
+        attempt += 1
+        if progress_every and attempt % progress_every == 0:
+            print(
+                f"[generator] tried {attempt} candidates "
+                f"(mode=first, region={region_mode}, unique={ensure_unique})"
+            )
+        if ensure_unique:
+            if fast_unique and not _is_unique_payload(payload, fast_unique_timelimit_s):
+                continue
+            if not _is_unique_payload(payload, time_limit_s):
+                continue
             return payload, solution
+        return payload, solution
 
-        positions = solution.positions()
-        rng.shuffle(positions)
-        givens: list[Cell] = []
-        for pos in positions:
-            givens.append(pos)
-            payload = _with_givens(base_payload, givens)
-            if _is_unique_payload(payload, time_limit_s):
-                return payload, solution
-
-    msg = f"Unable to generate a unique puzzle for n={n} after {max_attempts} attempts"
+    msg = f"Unable to generate a unique puzzle for n={n} after {attempt} attempts"
     raise ValueError(msg)
 
 
@@ -217,8 +322,10 @@ def generate_puzzle(
     n: int,
     seed: int | None = None,
     ensure_unique: bool = True,
-    max_attempts: int = 50,
+    max_attempts: int | None = 50,
     time_limit_s: float | None = None,
+    fast_unique: bool = False,
+    fast_unique_timelimit_s: float = 0.5,
 ) -> GeneratedPuzzle:
     """Generate a parsed puzzle along with its known-valid solution."""
 
@@ -228,6 +335,8 @@ def generate_puzzle(
         ensure_unique=ensure_unique,
         max_attempts=max_attempts,
         time_limit_s=time_limit_s,
+        fast_unique=fast_unique,
+        fast_unique_timelimit_s=fast_unique_timelimit_s,
     )
     puzzle = parse_puzzle_dict(payload)
     validation = validate_solution(puzzle, solution)

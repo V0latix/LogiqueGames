@@ -8,7 +8,7 @@ from linkedin_game_solver.games.queens.generator import generate_puzzle_payload
 
 
 def _write_puzzle(path: Path, n: int, seed: int) -> None:
-    payload, _solution = generate_puzzle_payload(n=n, seed=seed)
+    payload, _solution = generate_puzzle_payload(n=n, seed=seed, ensure_unique=False)
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 

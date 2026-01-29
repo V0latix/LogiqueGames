@@ -23,6 +23,7 @@ def test_cli_generate_solve_saves_a_solvable_puzzle(tmp_path: Path) -> None:
             "123",
             "--outdir",
             str(outdir),
+            "--allow-multiple",
         ]
     )
     assert exit_code == 0

@@ -12,7 +12,7 @@ def _write_payload(path: Path, payload: dict) -> None:
 
 
 def test_cli_solve_and_render(tmp_path: Path) -> None:
-    payload, _solution = generate_puzzle_payload(n=6, seed=123)
+    payload, _solution = generate_puzzle_payload(n=6, seed=123, ensure_unique=False)
     puzzle_path = tmp_path / "puzzle.json"
     _write_payload(puzzle_path, payload)
 

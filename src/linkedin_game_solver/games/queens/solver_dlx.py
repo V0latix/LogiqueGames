@@ -191,7 +191,10 @@ def count_solutions_dlx(
     limit: int = 2,
     time_limit_s: float | None = None,
 ) -> int:
-    """Count solutions up to a limit. Returns number found (0..limit) or -1 on timeout."""
+    """Count solutions up to a limit. Returns 0/1/limit (limit == 2 means 2+).
+
+    If a timeout occurs, returns `limit` (treat as non-unique for generators).
+    """
 
     if limit <= 0:
         return 0
@@ -301,8 +304,8 @@ def count_solutions_dlx(
 
     search()
     if timed_out():
-        return -1
-    return count
+        return limit
+    return min(count, limit)
 
 
 def solve_dlx(puzzle: QueensPuzzle, time_limit_s: float | None = None) -> SolveResult:

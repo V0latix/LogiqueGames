@@ -73,11 +73,25 @@ def _handle_generate_solve(args: argparse.Namespace) -> int:
         raise ValueError(msg)
 
     solver = _resolve_queens_solver(args.algo)
+    max_attempts = args.max_attempts
+    if not args.search_until_unique:
+        max_attempts = max_attempts or 50
+
+    region_mode = "constrained" if args.region_mode == "constrainde" else args.region_mode
+
     payload, known_solution = generate_puzzle_payload(
         n=args.n,
         seed=args.seed,
-        ensure_unique=True,
-        max_attempts=args.max_attempts or 50,
+        ensure_unique=not args.allow_multiple,
+        max_attempts=max_attempts,
+        region_mode=region_mode,
+        selection_mode=args.selection,
+        candidates=args.candidates,
+        score_algo=args.score_algo,
+        search_until_unique=args.search_until_unique,
+        progress_every=args.progress_every,
+        fast_unique=args.fast_unique,
+        fast_unique_timelimit_s=args.fast_unique_timelimit,
     )
     puzzle = parse_puzzle_dict(payload)
     result = solver(puzzle)
@@ -175,7 +189,10 @@ def _handle_generate_dataset(args: argparse.Namespace) -> int:
 
     solver = _resolve_queens_solver(args.algo)
     sizes = _parse_sizes(args.sizes)
-    max_attempts = args.max_attempts or (args.count * 10)
+    max_attempts = args.max_attempts
+    region_mode = "constrained" if args.region_mode == "constrainde" else args.region_mode
+    if not args.search_until_unique:
+        max_attempts = max_attempts or (args.count * 10)
 
     rng = None if args.seed is not None else random.Random()
     seed_cursor = args.seed
@@ -192,8 +209,16 @@ def _handle_generate_dataset(args: argparse.Namespace) -> int:
                 payload, _known_solution = generate_puzzle_payload(
                     n=n,
                     seed=seed_value,
-                    ensure_unique=True,
-                    max_attempts=1,
+                    ensure_unique=not args.allow_multiple,
+                    max_attempts=1 if not args.search_until_unique else max_attempts,
+                    region_mode=region_mode,
+                    selection_mode=args.selection,
+                    candidates=args.candidates,
+                    score_algo=args.score_algo,
+                    search_until_unique=args.search_until_unique,
+                    progress_every=args.progress_every,
+                    fast_unique=args.fast_unique,
+                    fast_unique_timelimit_s=args.fast_unique_timelimit,
                 )
                 puzzle = parse_puzzle_dict(payload)
                 result = solver(puzzle)
@@ -412,8 +437,58 @@ def build_parser() -> argparse.ArgumentParser:
     generate_solve.add_argument(
         "--max-attempts",
         type=int,
-        default=50,
-        help="Max attempts to generate a unique puzzle (default: 50).",
+        default=None,
+        help="Max attempts to generate a unique puzzle (default: 50, ignored with --search-until-unique).",
+    )
+    generate_solve.add_argument(
+        "--region-mode",
+        choices=["balanced", "biased", "serpentine", "constrained", "constrainde", "mixed"],
+        default="mixed",
+        help="Region generation style (default: mixed).",
+    )
+    generate_solve.add_argument(
+        "--selection",
+        choices=["first", "best"],
+        default="best",
+        help="Select first valid puzzle or keep best-scoring (default: best).",
+    )
+    generate_solve.add_argument(
+        "--candidates",
+        type=int,
+        default=30,
+        help="Number of candidates to score when using --selection best.",
+    )
+    generate_solve.add_argument(
+        "--score-algo",
+        default="heuristic_lcv",
+        help="Algorithm used to score difficulty (default: heuristic_lcv).",
+    )
+    generate_solve.add_argument(
+        "--allow-multiple",
+        action="store_true",
+        help="Allow puzzles with multiple solutions (disables uniqueness check).",
+    )
+    generate_solve.add_argument(
+        "--search-until-unique",
+        action="store_true",
+        help="Keep searching until a unique puzzle is found (no hard cap unless --max-attempts is set).",
+    )
+    generate_solve.add_argument(
+        "--progress-every",
+        type=int,
+        default=500,
+        help="Print a progress line every N candidates (default: 500).",
+    )
+    generate_solve.add_argument(
+        "--fast-unique",
+        action="store_true",
+        help="Use a fast uniqueness pre-check (DLX with short time limit).",
+    )
+    generate_solve.add_argument(
+        "--fast-unique-timelimit",
+        type=float,
+        default=0.5,
+        help="Time limit in seconds for fast uniqueness pre-check (default: 0.5).",
     )
     generate_solve.add_argument(
         "--outdir",
@@ -464,7 +539,57 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-attempts",
         type=int,
         default=None,
-        help="Maximum generation attempts per puzzle (default: count * 10).",
+        help="Maximum generation attempts per puzzle (default: count * 10, ignored with --search-until-unique).",
+    )
+    generate_dataset.add_argument(
+        "--region-mode",
+        choices=["balanced", "biased", "serpentine", "constrained", "constrainde", "mixed"],
+        default="mixed",
+        help="Region generation style (default: mixed).",
+    )
+    generate_dataset.add_argument(
+        "--selection",
+        choices=["first", "best"],
+        default="first",
+        help="Select first valid puzzle or keep best-scoring (default: first).",
+    )
+    generate_dataset.add_argument(
+        "--candidates",
+        type=int,
+        default=20,
+        help="Number of candidates to score when using --selection best.",
+    )
+    generate_dataset.add_argument(
+        "--score-algo",
+        default="heuristic_lcv",
+        help="Algorithm used to score difficulty (default: heuristic_lcv).",
+    )
+    generate_dataset.add_argument(
+        "--allow-multiple",
+        action="store_true",
+        help="Allow puzzles with multiple solutions (disables uniqueness check).",
+    )
+    generate_dataset.add_argument(
+        "--search-until-unique",
+        action="store_true",
+        help="Keep searching until a unique puzzle is found (no hard cap unless --max-attempts is set).",
+    )
+    generate_dataset.add_argument(
+        "--progress-every",
+        type=int,
+        default=500,
+        help="Print a progress line every N candidates (default: 500).",
+    )
+    generate_dataset.add_argument(
+        "--fast-unique",
+        action="store_true",
+        help="Use a fast uniqueness pre-check (DLX with short time limit).",
+    )
+    generate_dataset.add_argument(
+        "--fast-unique-timelimit",
+        type=float,
+        default=0.5,
+        help="Time limit in seconds for fast uniqueness pre-check (default: 0.5).",
     )
 
     import_samimsu = subparsers.add_parser(

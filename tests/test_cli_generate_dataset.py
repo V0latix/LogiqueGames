@@ -27,7 +27,14 @@ def test_cli_generate_dataset_creates_multiple_sizes(tmp_path: Path) -> None:
             "--outdir",
             str(outdir),
             "--max-attempts",
-            "5",
+            "30",
+            "--region-mode",
+            "mixed",
+            "--selection",
+            "best",
+            "--candidates",
+            "25",
+            "--allow-multiple",
         ]
     )
     assert exit_code == 0
