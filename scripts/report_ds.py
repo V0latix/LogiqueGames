@@ -28,7 +28,10 @@ def load_runs(path: Path) -> pd.DataFrame:
             records.append(json.loads(line))
     if not records:
         raise ValueError(f"No records found in {path}")
-    return pd.DataFrame.from_records(records)
+    df = pd.DataFrame.from_records(records)
+    if "source" not in df.columns:
+        df["source"] = "unknown"
+    return df
 
 
 def ensure_dir(path: Path) -> None:
@@ -55,6 +58,40 @@ def compute_summary(df: pd.DataFrame) -> pd.DataFrame:
         timeout_rate=("timeout", "mean"),
     )
     summary = summary.sort_values(by=["avg_time_ms", "solved_rate"], ascending=[True, False])
+    return summary
+
+
+def compute_source_summary(df: pd.DataFrame) -> pd.DataFrame:
+    grouped = df.groupby("source", as_index=False)
+    summary = grouped.agg(
+        runs=("source", "count"),
+        puzzles=("puzzle_id", "nunique"),
+        solved=("solved", "sum"),
+        solved_rate=("solved", "mean"),
+        avg_time_ms=("time_ms", lambda s: s[df.loc[s.index, "solved"]].mean()),
+        median_time_ms=("time_ms", lambda s: s[df.loc[s.index, "solved"]].median()),
+        avg_nodes=("nodes", lambda s: s[df.loc[s.index, "solved"]].mean()),
+        avg_backtracks=("backtracks", lambda s: s[df.loc[s.index, "solved"]].mean()),
+        timeout_rate=("timeout", "mean"),
+    )
+    summary = summary.sort_values(by=["avg_time_ms", "solved_rate"], ascending=[True, False])
+    return summary
+
+
+def compute_source_algo_summary(df: pd.DataFrame) -> pd.DataFrame:
+    grouped = df.groupby(["source", "algo"], as_index=False)
+    summary = grouped.agg(
+        runs=("algo", "count"),
+        puzzles=("puzzle_id", "nunique"),
+        solved=("solved", "sum"),
+        solved_rate=("solved", "mean"),
+        avg_time_ms=("time_ms", lambda s: s[df.loc[s.index, "solved"]].mean()),
+        median_time_ms=("time_ms", lambda s: s[df.loc[s.index, "solved"]].median()),
+        avg_nodes=("nodes", lambda s: s[df.loc[s.index, "solved"]].mean()),
+        avg_backtracks=("backtracks", lambda s: s[df.loc[s.index, "solved"]].mean()),
+        timeout_rate=("timeout", "mean"),
+    )
+    summary = summary.sort_values(by=["source", "avg_time_ms", "solved_rate"], ascending=[True, True, False])
     return summary
 
 
@@ -124,6 +161,8 @@ def plot_solve_rate_by_size(df: pd.DataFrame, out: Path) -> None:
 def build_report(
     df: pd.DataFrame,
     summary: pd.DataFrame,
+    source_summary: pd.DataFrame,
+    source_algo_summary: pd.DataFrame,
     input_path: Path,
     figdir: Path,
     report_path: Path,
@@ -136,6 +175,14 @@ def build_report(
     table["solved_rate"] = (table["solved_rate"] * 100).round(2)
     table["timeout_rate"] = (table["timeout_rate"] * 100).round(2)
 
+    source_table = source_summary.copy()
+    source_table["solved_rate"] = (source_table["solved_rate"] * 100).round(2)
+    source_table["timeout_rate"] = (source_table["timeout_rate"] * 100).round(2)
+
+    source_algo_table = source_algo_summary.copy()
+    source_algo_table["solved_rate"] = (source_algo_table["solved_rate"] * 100).round(2)
+    source_algo_table["timeout_rate"] = (source_algo_table["timeout_rate"] * 100).round(2)
+
     md = [
         "# Queens Data Science Report",
         "",
@@ -147,6 +194,14 @@ def build_report(
         "## Summary Table",
         "",
         table.to_markdown(index=False),
+        "",
+        "## Source Comparison (imported vs generated)",
+        "",
+        source_table.to_markdown(index=False),
+        "",
+        "## Source x Algo Breakdown",
+        "",
+        source_algo_table.to_markdown(index=False),
         "",
         "## Charts",
         "",
@@ -187,6 +242,8 @@ def main() -> None:
 
     df = load_runs(args.input)
     summary = compute_summary(df)
+    source_summary = compute_source_summary(df)
+    source_algo_summary = compute_source_algo_summary(df)
 
     sns.set_theme(style="whitegrid")
     ensure_dir(args.figdir)
@@ -198,7 +255,7 @@ def main() -> None:
     plot_time_by_size(df, args.figdir / "time_by_size.png")
     plot_solve_rate_by_size(df, args.figdir / "solve_rate_by_size.png")
 
-    build_report(df, summary, args.input, args.figdir, args.out)
+    build_report(df, summary, source_summary, source_algo_summary, args.input, args.figdir, args.out)
 
     print(f"Report written to: {args.out}")
     print(f"Figures written to: {args.figdir}")
