@@ -319,7 +319,7 @@ def _handle_generate_dataset(args: argparse.Namespace) -> int:
 
         for index in range(args.count):
             attempts = 0
-            while attempts < max_attempts:
+            while max_attempts is None or attempts < max_attempts:
                 seed_value, seed_cursor = _next_seed(rng, seed_cursor)
                 payload, _known_solution = generate_puzzle_payload(
                     n=n,
@@ -351,7 +351,7 @@ def _handle_generate_dataset(args: argparse.Namespace) -> int:
 
                 attempts += 1
 
-            if attempts >= max_attempts:
+            if max_attempts is not None and attempts >= max_attempts:
                 msg = (
                     f"Failed to generate a solvable puzzle for n={n} "
                     f"after {max_attempts} attempts."
