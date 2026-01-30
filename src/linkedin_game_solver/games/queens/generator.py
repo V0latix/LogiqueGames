@@ -304,6 +304,62 @@ def _try_repair_regions(
     return None
 
 
+def _boundary_cells(regions: Grid, region_id: int) -> list[Cell]:
+    n = len(regions)
+    cells: list[Cell] = []
+    for r in range(n):
+        for c in range(n):
+            if regions[r][c] != region_id:
+                continue
+            for nr, nc in _neighbors4(n, r, c):
+                if regions[nr][nc] != region_id:
+                    cells.append((r, c))
+                    break
+    return cells
+
+
+def _try_repair_regions_multi(
+    regions: Grid,
+    solution_a: list[Cell],
+    solution_b: list[Cell],
+    seeds: dict[int, Cell],
+) -> Grid | None:
+    """Attempt a two-cell swap across two regions to reduce alternative solutions."""
+
+    pos_a = {regions[r][c]: (r, c) for r, c in solution_a}
+    pos_b = {regions[r][c]: (r, c) for r, c in solution_b}
+    differing_regions = [rid for rid in pos_a if pos_a.get(rid) != pos_b.get(rid)]
+    random.shuffle(differing_regions)
+
+    for i, r1 in enumerate(differing_regions):
+        for r2 in differing_regions[i + 1 :]:
+            if seeds.get(r1) is None or seeds.get(r2) is None:
+                continue
+            if seeds[r1] == seeds[r2]:
+                continue
+            # Pick boundary cells to swap.
+            b1 = _boundary_cells(regions, r1)
+            b2 = _boundary_cells(regions, r2)
+            random.shuffle(b1)
+            random.shuffle(b2)
+            for c1 in b1[:20]:
+                if seeds[r1] == c1:
+                    continue
+                for c2 in b2[:20]:
+                    if seeds[r2] == c2:
+                        continue
+                    new_regions = [row[:] for row in regions]
+                    new_regions[c1[0]][c1[1]] = r2
+                    new_regions[c2[0]][c2[1]] = r1
+                    if not _is_region_connected(new_regions, r1, seeds[r1]):
+                        continue
+                    if not _is_region_connected(new_regions, r2, seeds[r2]):
+                        continue
+                    return new_regions
+
+    return None
+
+
 def generate_puzzle_payload(
     n: int,
     seed: int | None = None,
@@ -366,6 +422,26 @@ def generate_puzzle_payload(
 
                 if ensure_unique:
                     if fast_unique and not _is_unique_payload(payload, fast_unique_timelimit_s):
+                        if repair_steps > 0:
+                            puzzle = parse_puzzle_dict(payload)
+                            solutions = find_two_solutions_dlx(puzzle, time_limit_s=time_limit_s)
+                            if len(solutions) >= 2:
+                                seeds = _build_seed_map(payload["regions"], solution)
+                                for _ in range(repair_steps):
+                                    repair_attempts += 1
+                                    repaired = _try_repair_regions_multi(
+                                        payload["regions"], solutions[0], solutions[1], seeds
+                                    )
+                                    if repaired is None:
+                                        repaired = _try_repair_regions(
+                                            payload["regions"], solutions[0], solutions[1], seeds
+                                        )
+                                    if repaired is None:
+                                        break
+                                    payload["regions"] = repaired
+                                    if _is_unique_payload(payload, time_limit_s):
+                                        repair_successes += 1
+                                        return payload, solution
                         continue
                     if not _is_unique_payload(payload, time_limit_s):
                         if repair_steps > 0:
@@ -375,9 +451,13 @@ def generate_puzzle_payload(
                                 seeds = _build_seed_map(payload["regions"], solution)
                                 for _ in range(repair_steps):
                                     repair_attempts += 1
-                                    repaired = _try_repair_regions(
+                                    repaired = _try_repair_regions_multi(
                                         payload["regions"], solutions[0], solutions[1], seeds
                                     )
+                                    if repaired is None:
+                                        repaired = _try_repair_regions(
+                                            payload["regions"], solutions[0], solutions[1], seeds
+                                        )
                                     if repaired is None:
                                         break
                                     payload["regions"] = repaired
@@ -419,6 +499,22 @@ def generate_puzzle_payload(
             )
         if ensure_unique:
             if fast_unique and not _is_unique_payload(payload, fast_unique_timelimit_s):
+                if repair_steps > 0:
+                    puzzle = parse_puzzle_dict(payload)
+                    solutions = find_two_solutions_dlx(puzzle, time_limit_s=time_limit_s)
+                    if len(solutions) >= 2:
+                        seeds = _build_seed_map(payload["regions"], solution)
+                        for _ in range(repair_steps):
+                            repair_attempts += 1
+                            repaired = _try_repair_regions_multi(payload["regions"], solutions[0], solutions[1], seeds)
+                            if repaired is None:
+                                repaired = _try_repair_regions(payload["regions"], solutions[0], solutions[1], seeds)
+                            if repaired is None:
+                                break
+                            payload["regions"] = repaired
+                            if _is_unique_payload(payload, time_limit_s):
+                                repair_successes += 1
+                                return payload, solution
                 continue
             if not _is_unique_payload(payload, time_limit_s):
                 if repair_steps > 0:
@@ -428,7 +524,9 @@ def generate_puzzle_payload(
                         seeds = _build_seed_map(payload["regions"], solution)
                         for _ in range(repair_steps):
                             repair_attempts += 1
-                            repaired = _try_repair_regions(payload["regions"], solutions[0], solutions[1], seeds)
+                            repaired = _try_repair_regions_multi(payload["regions"], solutions[0], solutions[1], seeds)
+                            if repaired is None:
+                                repaired = _try_repair_regions(payload["regions"], solutions[0], solutions[1], seeds)
                             if repaired is None:
                                 break
                             payload["regions"] = repaired
