@@ -259,6 +259,10 @@ def _region_ambiguity_score(regions: Grid) -> int:
     return score
 
 
+def _mark_unique(payload: dict) -> None:
+    payload["solution"] = "unique"
+
+
 def _resolve_region_mode(region_mode: str, attempt: int) -> str:
     if region_mode == "mixed":
         modes = ("balanced", "biased", "serpentine", "constrained")
@@ -573,6 +577,7 @@ def generate_puzzle_payload(
                 _record_best_candidate(payload, solution)
                 if _is_unique_now():
                     repair_successes += 1
+                    _mark_unique(payload)
                     _log_unique()
                     return True
 
@@ -592,6 +597,7 @@ def generate_puzzle_payload(
                 _record_best_candidate(payload, solution)
                 if _is_unique_now():
                     block_successes += 1
+                    _mark_unique(payload)
                     _log_unique()
                     return True
 
@@ -637,6 +643,7 @@ def generate_puzzle_payload(
 
                 if ensure_unique:
                     full_unique_pass += 1
+                    _mark_unique(payload)
                     if progress_every:
                         print(
                             f"[generator] unique found after {attempts} candidates "
@@ -651,6 +658,7 @@ def generate_puzzle_payload(
                     best_solution = solution
 
             if best_payload is not None and best_solution is not None:
+                _mark_unique(best_payload)
                 return best_payload, best_solution
 
             if not search_until_unique:
@@ -690,6 +698,7 @@ def generate_puzzle_payload(
                     return payload, solution
                 continue
             full_unique_pass += 1
+            _mark_unique(payload)
             if progress_every:
                 print(
                     f"[generator] unique found after {attempt} candidates "
