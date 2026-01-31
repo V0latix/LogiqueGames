@@ -31,6 +31,8 @@ def load_runs(path: Path) -> pd.DataFrame:
     df = pd.DataFrame.from_records(records)
     if "source" not in df.columns:
         df["source"] = "unknown"
+    if "algo" in df.columns:
+        df = df[df["algo"] != "min_conflicts"].reset_index(drop=True)
     return df
 
 

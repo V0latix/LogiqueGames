@@ -6,21 +6,21 @@ from collections.abc import Callable
 
 from ...core.types import SolveResult
 from .parser import QueensPuzzle
+from .solver_backtracking_bb import solve_backtracking_bb
 from .solver_baseline import solve_baseline
 from .solver_csp import solve_csp_ac3
 from .solver_dlx import solve_dlx
 from .solver_heuristic import solve_heuristic_lcv, solve_heuristic_simple
-from .solver_min_conflicts import solve_min_conflicts
 
 QueensSolver = Callable[[QueensPuzzle, float | None], SolveResult]
 
 _SOLVERS: dict[str, QueensSolver] = {
+    "backtracking_bb": solve_backtracking_bb,
     "baseline": solve_baseline,
     "heuristic_simple": solve_heuristic_simple,
     "heuristic_lcv": solve_heuristic_lcv,
     "dlx": solve_dlx,
     "csp_ac3": solve_csp_ac3,
-    "min_conflicts": solve_min_conflicts,
 }
 
 

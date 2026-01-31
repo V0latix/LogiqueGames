@@ -86,6 +86,11 @@ best candidate seen so far. The fallback prefers low-ambiguity region layouts
 based on row/column spread (and in `selection=best`, it prefers the best-scoring
 candidate when available).
 
+### Payload metadata
+When a unique puzzle is confirmed, the generator sets `solution: "unique"` in the
+payload it returns/writes. If a global timeout triggers a fallback, the payload
+may be **non-unique** and therefore **won’t** get this tag.
+
 ### Progress logs
 Printed every `--progress-every N` candidates, including:
 - total candidates
