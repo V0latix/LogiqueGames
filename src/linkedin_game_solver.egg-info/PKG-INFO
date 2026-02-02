@@ -5,12 +5,17 @@ Summary: Educational puzzle solver framework with a Queens implementation.
 Author: Romain
 Requires-Python: >=3.9
 Description-Content-Type: text/markdown
+Requires-Dist: pandas>=3.0.0
+Requires-Dist: matplotlib>=3.10.8
+Requires-Dist: seaborn>=0.13.2
+Requires-Dist: tabulate>=0.9.0
 
 # linkedin-game-solver
 
-Educational puzzle solver framework in Python. The first implemented game is LinkedIn **Queens**.
+Framework educatif de resolution de puzzles en Python. Le premier jeu implemente
+est **Queens** (LinkedIn).
 
-## Quickstart
+## Demarrage rapide
 
 ```bash
 python -m pytest
@@ -19,8 +24,60 @@ ruff check .
 
 ## CLI
 
-The CLI entrypoint is `lgs` (wiring in progress):
+L'entree CLI est `lgs`.
+
+Generer et resoudre un puzzle :
 
 ```bash
-lgs solve --game queens --algo baseline --input data/curated/queens/example_6x6.json
+lgs generate-solve --n 6 --seed 123 --render
 ```
+
+Generer un dataset (plusieurs tailles) :
+
+```bash
+lgs generate-dataset --sizes 6,7,8 --count 20 --seed 100 --algo heuristic_lcv
+```
+
+Benchmarker un dataset :
+
+```bash
+lgs bench \
+  --game queens \
+  --dataset data/generated/queens \
+  --algo baseline,heuristic_simple,heuristic_lcv,dlx,csp_ac3,backtracking_bb \
+  --report reports/queens_bench_all.md \
+  --recursive \
+  --top-k 3
+```
+
+Generer le rapport data science enrichi :
+
+```bash
+.venv/bin/python scripts/make_queens_report.py \
+  --runs data/benchmarks/queens_runs.jsonl \
+  --manifest data/puzzles_unique.json \
+  --out reports/queens_report.md \
+  --figdir reports/figures
+```
+
+## Algorithms (resume pedagogique)
+
+Documentation complete : `docs/solver.md`
+
+- **dlx** : exact cover + Algorithm X + Dancing Links (reference perf).
+- **baseline** : backtracking simple ligne par ligne.
+- **backtracking_bb** : MRV + pruning + LCV local.
+- **backtracking_bb_nolcv** : ablation du LCV.
+- **heuristic_simple** : backtracking heuristique leger.
+- **heuristic_lcv** : MRV + LCV global.
+- **csp_ac3** : propagation de contraintes (AC-3) + backtracking.
+
+## Metriques (benchmarks)
+
+- **nodes** : nombre de placements testes
+- **backtracks** : nombre de retours en arriere
+- **time_ms** : temps ecoule
+
+## Notes
+
+- Projet educatif uniquement. Pas d'automatisation en production sur LinkedIn.

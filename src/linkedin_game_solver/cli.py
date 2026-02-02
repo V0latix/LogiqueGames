@@ -24,6 +24,7 @@ from linkedin_game_solver.games.queens.parser import parse_puzzle_dict, parse_pu
 from linkedin_game_solver.games.queens.renderer import render_puzzle, render_solution
 from linkedin_game_solver.games.queens.solvers import get_solver as get_queens_solver
 from linkedin_game_solver.games.queens.validator import validate_solution
+from linkedin_game_solver.games.zip.generator import generate_zip_puzzle_payload
 from linkedin_game_solver.games.zip.parser import parse_puzzle_file as parse_zip_puzzle_file
 from linkedin_game_solver.games.zip.renderer import (
     render_puzzle as render_zip_puzzle,
@@ -412,6 +413,115 @@ def _handle_generate_dataset(args: argparse.Namespace) -> int:
                 raise ValueError(msg)
 
     print(f"Generated {total_written} solvable puzzles into {args.outdir}")
+    return 0
+
+
+def _parse_zip_checkpoints(args: argparse.Namespace) -> int | float:
+    if args.checkpoints_range is not None and (args.checkpoints is not None or args.checkpoint_ratio is not None):
+        msg = "Provide only --checkpoints-range or --checkpoints/--checkpoint-ratio."
+        raise ValueError(msg)
+    if args.checkpoints is not None and args.checkpoint_ratio is not None:
+        msg = "Provide only one of --checkpoints or --checkpoint-ratio."
+        raise ValueError(msg)
+    if args.checkpoints is not None:
+        if args.checkpoints <= 0:
+            msg = "--checkpoints must be positive."
+            raise ValueError(msg)
+        return int(args.checkpoints)
+    ratio = args.checkpoint_ratio if args.checkpoint_ratio is not None else 0.2
+    if ratio <= 0 or ratio >= 1:
+        msg = "--checkpoint-ratio must be between 0 and 1."
+        raise ValueError(msg)
+    return float(ratio)
+
+
+def _parse_zip_checkpoints_range(raw: str | None) -> tuple[int, int] | None:
+    if raw is None:
+        return None
+    parts = [part.strip() for part in raw.split(",") if part.strip()]
+    if len(parts) != 2:
+        msg = "--checkpoints-range expects min,max."
+        raise ValueError(msg)
+    min_cp = int(parts[0])
+    max_cp = int(parts[1])
+    if min_cp <= 0 or max_cp <= 0 or min_cp > max_cp:
+        msg = "--checkpoints-range must be positive and min <= max."
+        raise ValueError(msg)
+    return min_cp, max_cp
+
+
+
+
+def _handle_generate_zip(args: argparse.Namespace) -> int:
+    if args.game != "zip":
+        msg = "generate-zip supports only --game zip."
+        raise ValueError(msg)
+
+    checkpoints = _parse_zip_checkpoints(args)
+    result = generate_zip_puzzle_payload(
+        n=args.n,
+        seed=args.seed,
+        checkpoints=checkpoints,
+        checkpoints_range=_parse_zip_checkpoints_range(args.checkpoints_range),
+        ensure_unique=not args.allow_multiple,
+        unique_timelimit_s=args.unique_timelimit,
+        max_attempts=args.max_attempts,
+        path_timelimit_s=args.path_timelimit,
+        max_walls=args.max_walls,
+    )
+
+    outdir = args.outdir
+    outdir.mkdir(parents=True, exist_ok=True)
+    seed_part = "noseed" if args.seed is None else f"seed{args.seed}"
+    output_path = outdir / f"zip_n{args.n}_{seed_part}.json"
+    output_path.write_text(json.dumps(result.payload, indent=2), encoding="utf-8")
+
+    print(f"Saved zip puzzle to: {output_path}")
+
+    if args.render:
+        puzzle = parse_zip_puzzle_file(output_path)
+        print()
+        print(render_zip_puzzle(puzzle).text)
+        print()
+        print(render_zip_solution(puzzle, result.solution).text)
+
+    return 0
+
+
+def _handle_generate_zip_dataset(args: argparse.Namespace) -> int:
+    if args.game != "zip":
+        msg = "generate-zip-dataset supports only --game zip."
+        raise ValueError(msg)
+
+    sizes = _parse_sizes(args.sizes)
+    checkpoints = _parse_zip_checkpoints(args)
+    rng = None if args.seed is not None else random.Random()
+    seed_cursor = args.seed
+
+    total_written = 0
+    for n in sizes:
+        outdir = args.outdir / f"size_{n}"
+        outdir.mkdir(parents=True, exist_ok=True)
+
+        for index in range(args.count):
+            seed_value, seed_cursor = _next_seed(rng, seed_cursor)
+            result = generate_zip_puzzle_payload(
+                n=n,
+                seed=seed_value,
+                checkpoints=checkpoints,
+                checkpoints_range=_parse_zip_checkpoints_range(args.checkpoints_range),
+                ensure_unique=not args.allow_multiple,
+                unique_timelimit_s=args.unique_timelimit,
+                max_attempts=args.max_attempts,
+                path_timelimit_s=args.path_timelimit,
+                max_walls=args.max_walls,
+            )
+            seed_part = "noseed" if seed_value is None else f"seed{seed_value}"
+            output_path = outdir / f"zip_n{n}_{index:03d}_{seed_part}.json"
+            output_path.write_text(json.dumps(result.payload, indent=2), encoding="utf-8")
+            total_written += 1
+
+    print(f"Generated {total_written} zip puzzles into {args.outdir}")
     return 0
 
 
@@ -835,6 +945,158 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print a progress line every N candidates.",
     )
 
+    generate_zip = subparsers.add_parser(
+        "generate-zip",
+        help="Generate a single Zip puzzle.",
+    )
+    zip_core = generate_zip.add_argument_group("Core")
+    zip_core.add_argument("--game", default="zip", help="Game name (only zip supported).")
+    zip_core.add_argument("--n", required=True, type=int, help="Grid size (n x n).")
+    zip_core.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility.")
+    zip_core.add_argument(
+        "--outdir",
+        type=Path,
+        default=Path("data/generated/zip"),
+        help="Directory to write generated puzzles.",
+    )
+    zip_core.add_argument(
+        "--render",
+        action="store_true",
+        help="Render the generated puzzle and solution to the console.",
+    )
+
+    zip_unique = generate_zip.add_argument_group("Uniqueness")
+    zip_unique.add_argument(
+        "--allow-multiple",
+        action="store_true",
+        help="Allow puzzles with multiple solutions.",
+    )
+    zip_unique.add_argument(
+        "--unique-timelimit",
+        type=float,
+        default=1.0,
+        help="Time limit in seconds for uniqueness verification.",
+    )
+
+    zip_params = generate_zip.add_argument_group("Parameters")
+    zip_params.add_argument(
+        "--checkpoints",
+        type=int,
+        default=None,
+        help="Number of checkpoints (1..n*n).",
+    )
+    zip_params.add_argument(
+        "--checkpoint-ratio",
+        type=float,
+        default=None,
+        help="Fraction of cells used as checkpoints (0<r<1).",
+    )
+    zip_params.add_argument(
+        "--max-attempts",
+        type=int,
+        default=200,
+        help="Maximum attempts to generate a valid puzzle.",
+    )
+    zip_params.add_argument(
+        "--path-timelimit",
+        type=float,
+        default=0.5,
+        help="Time limit in seconds for path generation.",
+    )
+    zip_params.add_argument(
+        "--checkpoints-range",
+        type=str,
+        default=None,
+        help="Checkpoint range as min,max (overrides --checkpoints/--checkpoint-ratio).",
+    )
+    zip_params.add_argument(
+        "--max-walls",
+        type=int,
+        default=10,
+        help="Maximum walls to add one-by-one while searching for uniqueness.",
+    )
+
+    generate_zip_dataset = subparsers.add_parser(
+        "generate-zip-dataset",
+        help="Generate many Zip puzzles across multiple sizes.",
+    )
+    zip_dataset_core = generate_zip_dataset.add_argument_group("Core")
+    zip_dataset_core.add_argument("--game", default="zip", help="Game name (only zip supported).")
+    zip_dataset_core.add_argument(
+        "--sizes",
+        required=True,
+        help="Comma-separated list of sizes, e.g., 4,5,6.",
+    )
+    zip_dataset_core.add_argument(
+        "--count",
+        required=True,
+        type=int,
+        help="Number of puzzles to generate per size.",
+    )
+    zip_dataset_core.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Optional base seed for reproducible generation.",
+    )
+    zip_dataset_core.add_argument(
+        "--outdir",
+        type=Path,
+        default=Path("data/generated/zip"),
+        help="Base directory to write generated datasets.",
+    )
+
+    zip_dataset_unique = generate_zip_dataset.add_argument_group("Uniqueness")
+    zip_dataset_unique.add_argument(
+        "--allow-multiple",
+        action="store_true",
+        help="Allow puzzles with multiple solutions.",
+    )
+    zip_dataset_unique.add_argument(
+        "--unique-timelimit",
+        type=float,
+        default=1.0,
+        help="Time limit in seconds for uniqueness verification.",
+    )
+
+    zip_dataset_params = generate_zip_dataset.add_argument_group("Parameters")
+    zip_dataset_params.add_argument(
+        "--checkpoints",
+        type=int,
+        default=None,
+        help="Number of checkpoints (1..n*n).",
+    )
+    zip_dataset_params.add_argument(
+        "--checkpoint-ratio",
+        type=float,
+        default=None,
+        help="Fraction of cells used as checkpoints (0<r<1).",
+    )
+    zip_dataset_params.add_argument(
+        "--max-attempts",
+        type=int,
+        default=200,
+        help="Maximum attempts to generate a valid puzzle.",
+    )
+    zip_dataset_params.add_argument(
+        "--path-timelimit",
+        type=float,
+        default=0.5,
+        help="Time limit in seconds for path generation.",
+    )
+    zip_dataset_params.add_argument(
+        "--checkpoints-range",
+        type=str,
+        default=None,
+        help="Checkpoint range as min,max (overrides --checkpoints/--checkpoint-ratio).",
+    )
+    zip_dataset_params.add_argument(
+        "--max-walls",
+        type=int,
+        default=10,
+        help="Maximum walls to add one-by-one while searching for uniqueness.",
+    )
+
     import_samimsu = subparsers.add_parser(
         "import-samimsu",
         help="Import puzzles from the MIT-licensed samimsu/queens-game-linkedin repo.",
@@ -1000,6 +1262,10 @@ def main(argv: list[str] | None = None) -> int:
             return _handle_bench(args)
         if args.command == "generate-dataset":
             return _handle_generate_dataset(args)
+        if args.command == "generate-zip":
+            return _handle_generate_zip(args)
+        if args.command == "generate-zip-dataset":
+            return _handle_generate_zip_dataset(args)
         if args.command == "import-samimsu":
             return _handle_import_samimsu(args)
         if args.command == "organize-dataset":
