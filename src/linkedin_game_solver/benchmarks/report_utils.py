@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import json
-import math
 import platform
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -95,9 +93,7 @@ def puzzle_features(regions: list[list[int]]) -> dict[str, float]:
             region_cols[rid].add(c)
             for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
                 nr, nc = r + dr, c + dc
-                if nr < 0 or nr >= n or nc < 0 or nc >= n:
-                    boundary_edges += 1
-                elif regions[nr][nc] != rid:
+                if nr < 0 or nr >= n or nc < 0 or nc >= n or regions[nr][nc] != rid:
                     boundary_edges += 1
 
     sizes = list(region_sizes.values())

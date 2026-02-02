@@ -205,11 +205,7 @@ def _solve_backtracking_bb(
             if not has_option:
                 return False
 
-        if not all(col_has_option.values()):
-            return False
-        if not all(region_has_option.values()):
-            return False
-        return True
+        return all(col_has_option.values()) and all(region_has_option.values())
 
     def lcv_score(row: int, col: int) -> int:
         score = 0

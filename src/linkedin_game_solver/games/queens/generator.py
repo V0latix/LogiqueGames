@@ -181,7 +181,18 @@ def generate_regions_from_solution(
             min_c = region_min_col[region_id]
             max_c = region_max_col[region_id]
 
-            def constrained_key(cell: Cell) -> tuple[int, int, int, int, int, int]:
+            def constrained_key(
+                cell: Cell,
+                *,
+                rows: set[int] = rows,
+                cols: set[int] = cols,
+                min_r: int = min_r,
+                max_r: int = max_r,
+                min_c: int = min_c,
+                max_c: int = max_c,
+                seed_r: int = seed_r,
+                seed_c: int = seed_c,
+            ) -> tuple[int, int, int, int, int, int]:
                 r, c = cell
                 row_count = len(rows) + (0 if r in rows else 1)
                 col_count = len(cols) + (0 if c in cols else 1)
