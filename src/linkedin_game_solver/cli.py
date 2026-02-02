@@ -367,6 +367,7 @@ def _handle_generate_dataset(args: argparse.Namespace) -> int:
     seed_cursor = args.seed
 
     total_written = 0
+    total_target = len(sizes) * args.count
     for n in sizes:
         outdir = args.outdir / f"size_{n}"
         outdir.mkdir(parents=True, exist_ok=True)
@@ -401,6 +402,12 @@ def _handle_generate_dataset(args: argparse.Namespace) -> int:
                     output_path = outdir / filename
                     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
                     total_written += 1
+                    print(
+                        "[dataset]",
+                        f"n={n}",
+                        f"puzzle={index + 1}/{args.count}",
+                        f"total={total_written}/{total_target}",
+                    )
                     break
 
                 attempts += 1
@@ -468,6 +475,7 @@ def _handle_generate_zip(args: argparse.Namespace) -> int:
         max_attempts=args.max_attempts,
         path_timelimit_s=args.path_timelimit,
         max_walls=args.max_walls,
+        progress_every=args.progress_every,
     )
 
     outdir = args.outdir
@@ -515,6 +523,7 @@ def _handle_generate_zip_dataset(args: argparse.Namespace) -> int:
                 max_attempts=args.max_attempts,
                 path_timelimit_s=args.path_timelimit,
                 max_walls=args.max_walls,
+                progress_every=args.progress_every,
             )
             seed_part = "noseed" if seed_value is None else f"seed{seed_value}"
             output_path = outdir / f"zip_n{n}_{index:03d}_{seed_part}.json"
@@ -1004,6 +1013,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Time limit in seconds for path generation.",
     )
     zip_params.add_argument(
+        "--progress-every",
+        type=int,
+        default=None,
+        help="Print a progress line every N attempts.",
+    )
+    zip_params.add_argument(
         "--checkpoints-range",
         type=str,
         default=None,
@@ -1083,6 +1098,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.5,
         help="Time limit in seconds for path generation.",
+    )
+    zip_dataset_params.add_argument(
+        "--progress-every",
+        type=int,
+        default=None,
+        help="Print a progress line every N attempts.",
     )
     zip_dataset_params.add_argument(
         "--checkpoints-range",

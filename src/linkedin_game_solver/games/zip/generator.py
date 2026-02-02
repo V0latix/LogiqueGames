@@ -155,6 +155,7 @@ def generate_zip_puzzle_payload(
     max_attempts: int = 200,
     path_timelimit_s: float | None = 0.5,
     max_walls: int | None = None,
+    progress_every: int | None = None,
 ) -> GenerationResult:
     if n <= 1:
         msg = "n must be at least 2."
@@ -193,6 +194,8 @@ def generate_zip_puzzle_payload(
 
     while attempts < max_attempts:
         attempts += 1
+        if progress_every and attempts % progress_every == 0:
+            print(f"[zip-generator] attempt {attempts}/{max_attempts} n={n}")
         path = _random_hamiltonian_path(n, rng, time_limit_s=path_timelimit_s)
         if path is None:
             path = _serpentine_path(n)
@@ -203,6 +206,13 @@ def generate_zip_puzzle_payload(
             wall_edges = rng.sample(wall_edges, len(wall_edges)) if wall_edges else []
 
             for wall_count in range(0, min(max_walls, len(wall_edges)) + 1):
+                if progress_every and attempts % progress_every == 0:
+                    print(
+                        "[zip-generator]",
+                        f"attempt={attempts}",
+                        f"checkpoints={len(numbers)}",
+                        f"walls={wall_count}",
+                    )
                 walls: list[dict[str, int]] = []
                 for (r1, c1), (r2, c2) in wall_edges[:wall_count]:
                     walls.append({"r1": r1, "c1": c1, "r2": r2, "c2": c2})

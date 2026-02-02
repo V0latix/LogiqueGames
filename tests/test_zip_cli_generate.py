@@ -21,6 +21,7 @@ def test_zip_cli_generate_writes_file(tmp_path: Path) -> None:
         max_attempts=10,
         path_timelimit=0.2,
         max_walls=2,
+        progress_every=None,
     )
     exit_code = _handle_generate_zip(args)
     assert exit_code == 0
