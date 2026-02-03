@@ -28,26 +28,20 @@
           <p>Place une reine par ligne, colonne et région, sans contact adjacent.</p>
         </div>
 
-        <div class="layout">
-          <aside class="panel">
-            <h2>Choisir un puzzle</h2>
-            <select id="queens-select" disabled>
-              <option>Chargement à venir…</option>
-            </select>
-            <div class="panel-status" id="queens-status">Chargement…</div>
-            <div class="panel-actions">
-              <button type="button" class="secondary" id="queens-reset" disabled>Réinitialiser</button>
-              <button type="button" class="primary" id="queens-verify" disabled>Vérifier</button>
-            </div>
-            <div class="panel-note">
-              Clique sur une case pour placer ou retirer une reine.
-            </div>
-          </aside>
-
-          <section class="board" aria-label="Grille Queens">
-            <div class="grid" id="queens-board"></div>
-          </section>
+        <div class="controls">
+          <button type="button" class="secondary" id="queens-next" disabled>Puzzle suivant</button>
+          <button type="button" class="secondary" id="queens-reset" disabled>Réinitialiser</button>
+          <button type="button" class="secondary" id="queens-hint" disabled>Hint</button>
+          <button type="button" class="primary" id="queens-verify" disabled>Vérifier</button>
+          <div class="panel-status" id="queens-status">Chargement…</div>
         </div>
+        <div class="panel-note">
+          Clique sur une case pour placer une croix, puis reclique pour poser une reine.
+        </div>
+
+        <section class="board" aria-label="Grille Queens">
+          <div class="grid" id="queens-board"></div>
+        </section>
       </section>
 
       <section class="view" id="view-zip" aria-labelledby="zip-title">

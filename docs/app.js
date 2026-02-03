@@ -28,17 +28,29 @@ tabs.forEach((tab) => {
 const initialView = window.location.hash.replace('#', '') || 'queens';
 setActiveView(initialView);
 
-const queensSelect = document.getElementById('queens-select');
 const queensBoard = document.getElementById('queens-board');
 const queensStatus = document.getElementById('queens-status');
 const queensReset = document.getElementById('queens-reset');
 const queensVerify = document.getElementById('queens-verify');
+const queensHint = document.getElementById('queens-hint');
+const queensNext = document.getElementById('queens-next');
 
 const queensState = {
   puzzles: [],
   current: null,
+  currentIndex: null,
   queens: new Set(),
+  marks: new Set(),
   cellElements: [],
+  solved: false,
+};
+
+const dragState = {
+  active: false,
+  moved: false,
+  startKey: null,
+  lastKey: null,
+  markingStarted: false,
 };
 
 function cellKey(r, c) {
@@ -69,13 +81,23 @@ function normalizeQueensPuzzle(raw) {
     (raw.givens?.blocked ?? []).map(([r, c]) => cellKey(r, c))
   );
 
+  const palette = [
+    '#e7f27c',
+    '#ff8a73',
+    '#b9e6a5',
+    '#e6e3e0',
+    '#9fc4ff',
+    '#c7b0ea',
+    '#ffd2a1',
+    '#f3b7d4',
+    '#b8f1ed',
+    '#d9f7a1',
+  ];
   const ids = Array.from(regionIds).sort((a, b) => a - b);
   const regionColors = new Map();
   ids.forEach((id, index) => {
-    const hue = Math.round((index * 360) / ids.length);
     regionColors.set(id, {
-      bg: `hsl(${hue} 65% 92%)`,
-      border: `hsl(${hue} 55% 72%)`,
+      bg: palette[index % palette.length],
     });
   });
 
@@ -85,21 +107,8 @@ function normalizeQueensPuzzle(raw) {
     regionColors,
     givensQueens,
     blocked,
+    solutionCols: null,
   };
-}
-
-function buildQueensOptions(puzzles) {
-  queensSelect.innerHTML = '';
-  puzzles.forEach((puzzle, index) => {
-    const option = document.createElement('option');
-    const givensCount = puzzle.givensQueens.size;
-    const blockedCount = puzzle.blocked.size;
-    const givensText = givensCount ? ` · ${givensCount} reine(s)` : '';
-    const blockedText = blockedCount ? ` · ${blockedCount} bloquee(s)` : '';
-    option.value = String(index);
-    option.textContent = `Puzzle ${puzzle.id} · ${puzzle.n}x${puzzle.n}${givensText}${blockedText}`;
-    queensSelect.appendChild(option);
-  });
 }
 
 function renderQueensBoard(puzzle) {
@@ -123,7 +132,6 @@ function renderQueensBoard(puzzle) {
       const colors = puzzle.regionColors.get(regionId);
       if (colors) {
         cell.style.setProperty('--region-bg', colors.bg);
-        cell.style.setProperty('--region-border', colors.border);
       }
 
       const key = cellKey(r, c);
@@ -210,7 +218,19 @@ function updateQueensStatusInfo() {
   const total = puzzle.n;
   const placed = queensState.queens.size;
   const conflicts = computeQueensConflicts(puzzle, queensState.queens);
-  let message = `Reines placees: ${placed}/${total}.`;
+  const solved =
+    placed === total &&
+    conflicts.size === 0 &&
+    validateQueensSolution(puzzle, queensState.queens).ok;
+
+  queensState.solved = solved;
+
+  if (solved) {
+    setQueensStatus("C'est bien, t'as reussi. Clique sur \"Puzzle suivant\".", 'ok');
+    return;
+  }
+
+  let message = `Puzzle ${puzzle.id} · ${puzzle.n}x${puzzle.n}. Reines: ${placed}/${total}.`;
   let type = null;
   if (conflicts.size > 0) {
     message += ` Conflits: ${conflicts.size}.`;
@@ -236,12 +256,20 @@ function updateQueensUI() {
       const isGiven = puzzle.givensQueens.has(key);
       const isBlocked = puzzle.blocked.has(key);
       const isQueen = queensState.queens.has(key) || isGiven;
+      const isMark = queensState.marks.has(key);
 
       if (!isBlocked && !isGiven) {
-        cell.textContent = isQueen ? '♛' : '';
+        if (isQueen) {
+          cell.textContent = '♛';
+        } else if (isMark) {
+          cell.textContent = '×';
+        } else {
+          cell.textContent = '';
+        }
       }
 
       cell.classList.toggle('queen', isQueen);
+      cell.classList.toggle('mark', !isQueen && isMark);
       cell.classList.toggle('conflict', isQueen && conflicts.has(key));
     }
   }
@@ -299,7 +327,7 @@ function validateQueensSolution(puzzle, queensSet) {
   }
 
   const queenKeys = new Set(positions.map((pos) => pos.key));
-  for (const { r, c, key } of positions) {
+  for (const { r, c } of positions) {
     for (let dr = -1; dr <= 1; dr += 1) {
       for (let dc = -1; dc <= 1; dc += 1) {
         if (dr === 0 && dc === 0) {
@@ -320,14 +348,177 @@ function validateQueensSolution(puzzle, queensSet) {
   return { ok: true, reason: null };
 }
 
+function solveQueens(puzzle) {
+  if (puzzle.solutionCols) {
+    return puzzle.solutionCols;
+  }
+
+  const n = puzzle.n;
+  const fixedCols = Array(n).fill(-1);
+
+  for (const key of puzzle.givensQueens) {
+    const [r, c] = parseCellKey(key);
+    if (fixedCols[r] !== -1 && fixedCols[r] !== c) {
+      return null;
+    }
+    fixedCols[r] = c;
+  }
+
+  const usedCols = new Set();
+  const usedRegions = new Set();
+  const cols = Array(n).fill(-1);
+
+  function backtrack(row, prevCol) {
+    if (row === n) {
+      return true;
+    }
+
+    const fixed = fixedCols[row];
+    const candidates = fixed >= 0 ? [fixed] : Array.from({ length: n }, (_, i) => i);
+
+    for (const col of candidates) {
+      const key = cellKey(row, col);
+      if (puzzle.blocked.has(key)) {
+        continue;
+      }
+      if (usedCols.has(col)) {
+        continue;
+      }
+      const regionId = puzzle.regions[row][col];
+      if (usedRegions.has(regionId)) {
+        continue;
+      }
+      if (prevCol !== null && Math.abs(col - prevCol) <= 1) {
+        continue;
+      }
+
+      usedCols.add(col);
+      usedRegions.add(regionId);
+      cols[row] = col;
+
+      if (backtrack(row + 1, col)) {
+        return true;
+      }
+
+      usedCols.delete(col);
+      usedRegions.delete(regionId);
+      cols[row] = -1;
+    }
+
+    return false;
+  }
+
+  if (!backtrack(0, null)) {
+    return null;
+  }
+
+  puzzle.solutionCols = cols;
+  return cols;
+}
+
+function applyQueensHint() {
+  const puzzle = queensState.current;
+  if (!puzzle) {
+    return;
+  }
+
+  const solution = solveQueens(puzzle);
+  if (!solution) {
+    setQueensStatus('Indice indisponible pour ce puzzle.', 'error');
+    return;
+  }
+
+  const solutionKeys = solution.map((col, row) => cellKey(row, col));
+  for (const key of solutionKeys) {
+    if (!queensState.queens.has(key)) {
+      queensState.queens.add(key);
+      queensState.marks.delete(key);
+      updateQueensUI();
+      setQueensStatus('Indice applique: une reine a ete ajoutee.', 'ok');
+      return;
+    }
+  }
+
+  setQueensStatus('Toutes les reines sont deja placees.', 'ok');
+}
+
 function setQueensPuzzle(puzzle) {
   queensState.current = puzzle;
   queensState.queens = new Set(puzzle.givensQueens);
+  queensState.marks = new Set();
+  queensState.solved = false;
   renderQueensBoard(puzzle);
   updateQueensUI();
 }
 
-queensBoard.addEventListener('click', (event) => {
+function pickRandomPuzzleIndex(excludeIndex) {
+  const count = queensState.puzzles.length;
+  if (count === 0) {
+    return null;
+  }
+  if (count === 1) {
+    return 0;
+  }
+  let index = Math.floor(Math.random() * count);
+  while (index === excludeIndex) {
+    index = Math.floor(Math.random() * count);
+  }
+  return index;
+}
+
+function pickNextPuzzle() {
+  const nextIndex = pickRandomPuzzleIndex(queensState.currentIndex);
+  if (nextIndex === null) {
+    return null;
+  }
+  queensState.currentIndex = nextIndex;
+  return queensState.puzzles[nextIndex];
+}
+
+function isInteractiveCell(key, puzzle) {
+  return !puzzle.blocked.has(key) && !puzzle.givensQueens.has(key);
+}
+
+function markCell(key, puzzle) {
+  if (!isInteractiveCell(key, puzzle)) {
+    return false;
+  }
+  if (queensState.queens.has(key)) {
+    return false;
+  }
+  queensState.marks.add(key);
+  return true;
+}
+
+function cycleCellState(key, puzzle) {
+  if (!isInteractiveCell(key, puzzle)) {
+    return;
+  }
+
+  if (queensState.queens.has(key)) {
+    queensState.queens.delete(key);
+  } else if (queensState.marks.has(key)) {
+    queensState.marks.delete(key);
+    queensState.queens.add(key);
+  } else {
+    queensState.marks.add(key);
+  }
+}
+
+function getCellFromEvent(event) {
+  const element = document.elementFromPoint(event.clientX, event.clientY);
+  return element ? element.closest('.cell') : null;
+}
+
+function resetDragState() {
+  dragState.active = false;
+  dragState.moved = false;
+  dragState.startKey = null;
+  dragState.lastKey = null;
+  dragState.markingStarted = false;
+}
+
+queensBoard.addEventListener('pointerdown', (event) => {
   const target = event.target.closest('.cell');
   if (!target || !queensState.current) {
     return;
@@ -337,24 +528,75 @@ queensBoard.addEventListener('click', (event) => {
   const key = cellKey(r, c);
   const puzzle = queensState.current;
 
-  if (puzzle.blocked.has(key) || puzzle.givensQueens.has(key)) {
+  if (!isInteractiveCell(key, puzzle)) {
     return;
   }
 
-  if (queensState.queens.has(key)) {
-    queensState.queens.delete(key);
-  } else {
-    queensState.queens.add(key);
+  event.preventDefault();
+  dragState.active = true;
+  dragState.moved = false;
+  dragState.startKey = key;
+  dragState.lastKey = key;
+  dragState.markingStarted = false;
+  queensBoard.setPointerCapture(event.pointerId);
+});
+
+queensBoard.addEventListener('pointermove', (event) => {
+  if (!dragState.active || !queensState.current) {
+    return;
   }
 
-  updateQueensUI();
+  const cell = getCellFromEvent(event);
+  if (!cell) {
+    return;
+  }
+
+  const r = Number(cell.dataset.r);
+  const c = Number(cell.dataset.c);
+  const key = cellKey(r, c);
+  if (key === dragState.lastKey) {
+    return;
+  }
+
+  dragState.moved = true;
+  dragState.lastKey = key;
+
+  if (!dragState.markingStarted) {
+    markCell(dragState.startKey, queensState.current);
+    dragState.markingStarted = true;
+  }
+
+  if (markCell(key, queensState.current)) {
+    updateQueensUI();
+  }
 });
+
+function finishPointerInteraction(event) {
+  if (!dragState.active || !queensState.current) {
+    resetDragState();
+    return;
+  }
+
+  if (!dragState.moved && dragState.startKey) {
+    cycleCellState(dragState.startKey, queensState.current);
+    updateQueensUI();
+  } else {
+    updateQueensUI();
+  }
+
+  queensBoard.releasePointerCapture(event.pointerId);
+  resetDragState();
+}
+
+queensBoard.addEventListener('pointerup', finishPointerInteraction);
+queensBoard.addEventListener('pointercancel', finishPointerInteraction);
 
 queensReset.addEventListener('click', () => {
   if (!queensState.current) {
     return;
   }
   queensState.queens = new Set(queensState.current.givensQueens);
+  queensState.marks = new Set();
   updateQueensUI();
 });
 
@@ -367,6 +609,17 @@ queensVerify.addEventListener('click', () => {
     setQueensStatus('Bravo, solution correcte !', 'ok');
   } else {
     setQueensStatus(result.reason ?? 'Solution incorrecte.', 'error');
+  }
+});
+
+queensHint.addEventListener('click', () => {
+  applyQueensHint();
+});
+
+queensNext.addEventListener('click', () => {
+  const puzzle = pickNextPuzzle();
+  if (puzzle) {
+    setQueensPuzzle(puzzle);
   }
 });
 
@@ -383,26 +636,19 @@ async function loadQueens() {
     }
 
     queensState.puzzles = data.puzzles.map(normalizeQueensPuzzle);
-    buildQueensOptions(queensState.puzzles);
-    queensSelect.disabled = false;
     queensReset.disabled = false;
     queensVerify.disabled = false;
+    queensHint.disabled = false;
+    queensNext.disabled = false;
 
-    const firstPuzzle = queensState.puzzles[0];
-    setQueensPuzzle(firstPuzzle);
-    queensSelect.value = '0';
+    const firstPuzzle = pickNextPuzzle();
+    if (firstPuzzle) {
+      setQueensPuzzle(firstPuzzle);
+    }
   } catch (error) {
     console.error(error);
     setQueensStatus('Impossible de charger les puzzles Queens.', 'error');
   }
 }
-
-queensSelect.addEventListener('change', (event) => {
-  const index = Number(event.target.value);
-  const puzzle = queensState.puzzles[index];
-  if (puzzle) {
-    setQueensPuzzle(puzzle);
-  }
-});
 
 loadQueens();

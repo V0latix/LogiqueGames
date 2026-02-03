@@ -1,10 +1,11 @@
 :root {
   color-scheme: light;
-  --bg: #f3f2ef;
+  --bg: #f6f2ee;
   --card: #ffffff;
   --text: #1f2328;
   --muted: #5c6c77;
   --border: #d0d7de;
+  --ink: #111111;
   --primary: #0a66c2;
   --primary-dark: #004182;
   --shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
@@ -102,6 +103,24 @@ body {
 .view-header p {
   margin: 0 0 24px;
   color: var(--muted);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.controls .panel-status {
+  flex-basis: 100%;
+}
+
+.controls button.secondary,
+.controls button.primary {
+  flex: 0 0 auto;
+  min-width: 140px;
 }
 
 .layout {
@@ -203,7 +222,7 @@ button.secondary:hover {
 .board {
   background: var(--card);
   border-radius: var(--radius);
-  padding: 24px;
+  padding: 18px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   min-height: 420px;
@@ -216,27 +235,29 @@ button.secondary:hover {
   width: 100%;
   max-width: 520px;
   display: grid;
-  gap: 6px;
+  gap: 0;
+  border: 6px solid var(--ink);
+  border-radius: 16px;
+  overflow: hidden;
 }
 
 .cell {
-  border: 1px solid var(--region-border, var(--border));
-  border-radius: 10px;
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
   aspect-ratio: 1 / 1;
   background: var(--region-bg, #fff);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
-  color: #1b1f23;
+  color: var(--ink);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition: background 120ms ease;
 }
 
 .cell:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  background: var(--region-bg, #fff);
 }
 
 .cell.blocked {
@@ -246,12 +267,16 @@ button.secondary:hover {
 }
 
 .cell.given {
-  background: #e8f0fe;
-  border-color: #97b8e9;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.cell.mark {
+  color: #5c6c77;
+  font-weight: 600;
 }
 
 .cell.queen {
-  color: #0a66c2;
+  color: #111111;
 }
 
 .cell.conflict {
