@@ -35,6 +35,12 @@ const queensVerify = document.getElementById('queens-verify');
 const queensHint = document.getElementById('queens-hint');
 const queensNext = document.getElementById('queens-next');
 
+const zipBoard = document.getElementById('zip-board');
+const zipStatus = document.getElementById('zip-status');
+const zipReset = document.getElementById('zip-reset');
+const zipVerify = document.getElementById('zip-verify');
+const zipNext = document.getElementById('zip-next');
+
 const queensState = {
   puzzles: [],
   current: null,
@@ -45,12 +51,28 @@ const queensState = {
   solved: false,
 };
 
+const zipState = {
+  puzzles: [],
+  current: null,
+  currentIndex: null,
+  path: [],
+  cellElements: [],
+  numberElements: new Map(),
+  numberByKey: new Map(),
+  solved: false,
+};
+
 const dragState = {
   active: false,
   moved: false,
   startKey: null,
   lastKey: null,
   markingStarted: false,
+};
+
+const zipDragState = {
+  active: false,
+  lastKey: null,
 };
 
 function cellKey(r, c) {
@@ -67,6 +89,14 @@ function setQueensStatus(message, type = null) {
   queensStatus.classList.remove('ok', 'error', 'warn');
   if (type) {
     queensStatus.classList.add(type);
+  }
+}
+
+function setZipStatus(message, type = null) {
+  zipStatus.textContent = message;
+  zipStatus.classList.remove('ok', 'error', 'warn');
+  if (type) {
+    zipStatus.classList.add(type);
   }
 }
 
@@ -111,6 +141,55 @@ function normalizeQueensPuzzle(raw) {
   };
 }
 
+function normalizeWallKey(aKey, bKey) {
+  return aKey < bKey ? `${aKey}|${bKey}` : `${bKey}|${aKey}`;
+}
+
+function normalizeZipPuzzle(raw) {
+  const numberByKey = new Map();
+  raw.numbers.forEach(({ k, r, c }) => {
+    numberByKey.set(cellKey(r, c), k);
+  });
+
+  const walls = new Set();
+  raw.walls.forEach(({ r1, c1, r2, c2 }) => {
+    const aKey = cellKey(r1, c1);
+    const bKey = cellKey(r2, c2);
+    walls.add(normalizeWallKey(aKey, bKey));
+  });
+
+  const neighbors = new Map();
+  for (let r = 0; r < raw.n; r += 1) {
+    for (let c = 0; c < raw.n; c += 1) {
+      const key = cellKey(r, c);
+      const list = [];
+      const candidates = [
+        [r - 1, c],
+        [r + 1, c],
+        [r, c - 1],
+        [r, c + 1],
+      ];
+      candidates.forEach(([nr, nc]) => {
+        if (nr < 0 || nc < 0 || nr >= raw.n || nc >= raw.n) {
+          return;
+        }
+        const neighborKey = cellKey(nr, nc);
+        if (!walls.has(normalizeWallKey(key, neighborKey))) {
+          list.push(neighborKey);
+        }
+      });
+      neighbors.set(key, list);
+    }
+  }
+
+  return {
+    ...raw,
+    numberByKey,
+    walls,
+    neighbors,
+  };
+}
+
 function renderQueensBoard(puzzle) {
   const n = puzzle.n;
   queensBoard.innerHTML = '';
@@ -149,6 +228,60 @@ function renderQueensBoard(puzzle) {
       row.push(cell);
     }
     queensState.cellElements.push(row);
+  }
+}
+
+function renderZipBoard(puzzle) {
+  const n = puzzle.n;
+  zipBoard.innerHTML = '';
+  zipBoard.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+  zipBoard.style.gridTemplateRows = `repeat(${n}, 1fr)`;
+
+  zipState.cellElements = [];
+  zipState.numberElements = new Map();
+  zipState.numberByKey = puzzle.numberByKey;
+
+  for (let r = 0; r < n; r += 1) {
+    const row = [];
+    for (let c = 0; c < n; c += 1) {
+      const cell = document.createElement('div');
+      cell.className = 'zip-cell';
+      cell.dataset.r = String(r);
+      cell.dataset.c = String(c);
+
+      const key = cellKey(r, c);
+      const number = puzzle.numberByKey.get(key);
+      if (number !== undefined) {
+        cell.classList.add('has-number');
+        const badge = document.createElement('div');
+        badge.className = 'zip-number';
+        badge.textContent = String(number);
+        cell.appendChild(badge);
+        zipState.numberElements.set(key, badge);
+      }
+
+      const north = r > 0 ? cellKey(r - 1, c) : null;
+      const south = r < n - 1 ? cellKey(r + 1, c) : null;
+      const west = c > 0 ? cellKey(r, c - 1) : null;
+      const east = c < n - 1 ? cellKey(r, c + 1) : null;
+
+      if (north && puzzle.walls.has(normalizeWallKey(key, north))) {
+        cell.classList.add('wall-top');
+      }
+      if (south && puzzle.walls.has(normalizeWallKey(key, south))) {
+        cell.classList.add('wall-bottom');
+      }
+      if (west && puzzle.walls.has(normalizeWallKey(key, west))) {
+        cell.classList.add('wall-left');
+      }
+      if (east && puzzle.walls.has(normalizeWallKey(key, east))) {
+        cell.classList.add('wall-right');
+      }
+
+      zipBoard.appendChild(cell);
+      row.push(cell);
+    }
+    zipState.cellElements.push(row);
   }
 }
 
@@ -241,6 +374,25 @@ function updateQueensStatusInfo() {
   setQueensStatus(message, type);
 }
 
+function updateZipStatusInfo() {
+  const puzzle = zipState.current;
+  if (!puzzle) {
+    return;
+  }
+  const total = puzzle.n * puzzle.n;
+  const placed = zipState.path.length;
+  const solved = placed === total && validateZipSolution(puzzle, zipState.path).ok;
+  zipState.solved = solved;
+
+  if (solved) {
+    setZipStatus("C'est bien, t'as reussi. Clique sur \"Puzzle suivant\".", 'ok');
+    return;
+  }
+
+  let message = `Puzzle ${puzzle.id} · ${puzzle.n}x${puzzle.n}. Parcours: ${placed}/${total}.`;
+  setZipStatus(message, null);
+}
+
 function updateQueensUI() {
   const puzzle = queensState.current;
   if (!puzzle) {
@@ -275,6 +427,149 @@ function updateQueensUI() {
   }
 
   updateQueensStatusInfo();
+}
+
+function directionFromTo(fromKey, toKey) {
+  const [fr, fc] = parseCellKey(fromKey);
+  const [tr, tc] = parseCellKey(toKey);
+  if (tr === fr - 1 && tc === fc) {
+    return 'n';
+  }
+  if (tr === fr + 1 && tc === fc) {
+    return 's';
+  }
+  if (tr === fr && tc === fc - 1) {
+    return 'w';
+  }
+  if (tr === fr && tc === fc + 1) {
+    return 'e';
+  }
+  return null;
+}
+
+function applyZipPathStyles(cell, segments) {
+  if (!segments || segments.size === 0) {
+    cell.style.backgroundImage = '';
+    cell.style.backgroundSize = '';
+    cell.style.backgroundPosition = '';
+    cell.style.backgroundRepeat = '';
+    return;
+  }
+
+  const color = 'var(--zip-path)';
+  const gradients = [];
+  const sizes = [];
+  const positions = [];
+  const stroke = 'var(--zip-stroke)';
+  const node = 'var(--zip-node)';
+
+  if (segments.has('n')) {
+    gradients.push(`linear-gradient(${color}, ${color})`);
+    sizes.push(`${stroke} 50%`);
+    positions.push('center top');
+  }
+  if (segments.has('s')) {
+    gradients.push(`linear-gradient(${color}, ${color})`);
+    sizes.push(`${stroke} 50%`);
+    positions.push('center bottom');
+  }
+  if (segments.has('w')) {
+    gradients.push(`linear-gradient(${color}, ${color})`);
+    sizes.push(`50% ${stroke}`);
+    positions.push('left center');
+  }
+  if (segments.has('e')) {
+    gradients.push(`linear-gradient(${color}, ${color})`);
+    sizes.push(`50% ${stroke}`);
+    positions.push('right center');
+  }
+
+  if (segments.has('n') && !segments.has('s')) {
+    gradients.push(`radial-gradient(circle, ${color} 0 60%, transparent 61%)`);
+    sizes.push(`${stroke} ${stroke}`);
+    positions.push('center top');
+  }
+  if (segments.has('s') && !segments.has('n')) {
+    gradients.push(`radial-gradient(circle, ${color} 0 60%, transparent 61%)`);
+    sizes.push(`${stroke} ${stroke}`);
+    positions.push('center bottom');
+  }
+  if (segments.has('w') && !segments.has('e')) {
+    gradients.push(`radial-gradient(circle, ${color} 0 60%, transparent 61%)`);
+    sizes.push(`${stroke} ${stroke}`);
+    positions.push('left center');
+  }
+  if (segments.has('e') && !segments.has('w')) {
+    gradients.push(`radial-gradient(circle, ${color} 0 60%, transparent 61%)`);
+    sizes.push(`${stroke} ${stroke}`);
+    positions.push('right center');
+  }
+
+  gradients.push(`radial-gradient(circle, ${color} 0 60%, transparent 61%)`);
+  sizes.push(`${node} ${node}`);
+  positions.push('center center');
+
+  cell.style.backgroundImage = gradients.join(', ');
+  cell.style.backgroundSize = sizes.join(', ');
+  cell.style.backgroundPosition = positions.join(', ');
+  cell.style.backgroundRepeat = 'no-repeat';
+}
+
+function updateZipUI() {
+  const puzzle = zipState.current;
+  if (!puzzle) {
+    return;
+  }
+
+  const path = zipState.path;
+  const pathSet = new Set(path);
+  const lastKey = path.length ? path[path.length - 1] : null;
+  const indexByKey = new Map();
+  path.forEach((key, index) => {
+    indexByKey.set(key, index);
+  });
+
+  for (let r = 0; r < puzzle.n; r += 1) {
+    for (let c = 0; c < puzzle.n; c += 1) {
+      const cell = zipState.cellElements[r][c];
+      const key = cellKey(r, c);
+      const isPath = pathSet.has(key);
+      const isActive = lastKey === key;
+      cell.classList.toggle('path', isPath);
+      cell.classList.toggle('active', isActive);
+
+      const numberElement = zipState.numberElements.get(key);
+      if (numberElement) {
+        numberElement.classList.toggle('active', isActive);
+      }
+
+      if (!isPath) {
+        applyZipPathStyles(cell, null);
+        continue;
+      }
+
+      const segments = new Set();
+      const index = indexByKey.get(key);
+      if (index > 0) {
+        const prevKey = path[index - 1];
+        const dir = directionFromTo(key, prevKey);
+        if (dir) {
+          segments.add(dir);
+        }
+      }
+      if (index < path.length - 1) {
+        const nextKey = path[index + 1];
+        const dir = directionFromTo(key, nextKey);
+        if (dir) {
+          segments.add(dir);
+        }
+      }
+
+      applyZipPathStyles(cell, segments);
+    }
+  }
+
+  updateZipStatusInfo();
 }
 
 function validateQueensSolution(puzzle, queensSet) {
@@ -343,6 +638,57 @@ function validateQueensSolution(puzzle, queensSet) {
         }
       }
     }
+  }
+
+  return { ok: true, reason: null };
+}
+
+function validateZipSolution(puzzle, path) {
+  const n = puzzle.n;
+  if (path.length !== n * n) {
+    return { ok: false, reason: 'Le chemin doit couvrir toute la grille.' };
+  }
+
+  const seen = new Set();
+  for (let i = 0; i < path.length; i += 1) {
+    const key = path[i];
+    if (seen.has(key)) {
+      return { ok: false, reason: 'Une case est visitee plusieurs fois.' };
+    }
+    seen.add(key);
+
+    if (i > 0) {
+      const prev = path[i - 1];
+      const neighbors = puzzle.neighbors.get(prev) ?? [];
+      if (!neighbors.includes(key)) {
+        return { ok: false, reason: 'Le chemin doit rester adjacent et respecter les murs.' };
+      }
+    }
+  }
+
+  const positions = new Map();
+  path.forEach((key, index) => {
+    positions.set(key, index);
+  });
+
+  const numbers = Array.from(puzzle.numberByKey.values());
+  const maxNumber = numbers.length ? Math.max(...numbers) : 0;
+
+  let lastIndex = -1;
+  for (let k = 1; k <= maxNumber; k += 1) {
+    const entry = Array.from(puzzle.numberByKey.entries()).find(([, value]) => value === k);
+    if (!entry) {
+      return { ok: false, reason: `Nombre ${k} manquant.` };
+    }
+    const key = entry[0];
+    const idx = positions.get(key);
+    if (idx === undefined) {
+      return { ok: false, reason: `Le nombre ${k} n'est pas visite.` };
+    }
+    if (idx <= lastIndex) {
+      return { ok: false, reason: 'Les nombres doivent etre visites dans l\'ordre.' };
+    }
+    lastIndex = idx;
   }
 
   return { ok: true, reason: null };
@@ -451,8 +797,16 @@ function setQueensPuzzle(puzzle) {
   updateQueensUI();
 }
 
-function pickRandomPuzzleIndex(excludeIndex) {
-  const count = queensState.puzzles.length;
+function setZipPuzzle(puzzle) {
+  zipState.current = puzzle;
+  zipState.path = [];
+  zipState.solved = false;
+  renderZipBoard(puzzle);
+  updateZipUI();
+}
+
+function pickRandomPuzzleIndex(excludeIndex, puzzles) {
+  const count = puzzles.length;
   if (count === 0) {
     return null;
   }
@@ -466,13 +820,13 @@ function pickRandomPuzzleIndex(excludeIndex) {
   return index;
 }
 
-function pickNextPuzzle() {
-  const nextIndex = pickRandomPuzzleIndex(queensState.currentIndex);
+function pickNextPuzzle(state) {
+  const nextIndex = pickRandomPuzzleIndex(state.currentIndex, state.puzzles);
   if (nextIndex === null) {
     return null;
   }
-  queensState.currentIndex = nextIndex;
-  return queensState.puzzles[nextIndex];
+  state.currentIndex = nextIndex;
+  return state.puzzles[nextIndex];
 }
 
 function isInteractiveCell(key, puzzle) {
@@ -510,12 +864,22 @@ function getCellFromEvent(event) {
   return element ? element.closest('.cell') : null;
 }
 
+function getZipCellFromEvent(event) {
+  const element = document.elementFromPoint(event.clientX, event.clientY);
+  return element ? element.closest('.zip-cell') : null;
+}
+
 function resetDragState() {
   dragState.active = false;
   dragState.moved = false;
   dragState.startKey = null;
   dragState.lastKey = null;
   dragState.markingStarted = false;
+}
+
+function resetZipDragState() {
+  zipDragState.active = false;
+  zipDragState.lastKey = null;
 }
 
 queensBoard.addEventListener('pointerdown', (event) => {
@@ -591,6 +955,86 @@ function finishPointerInteraction(event) {
 queensBoard.addEventListener('pointerup', finishPointerInteraction);
 queensBoard.addEventListener('pointercancel', finishPointerInteraction);
 
+zipBoard.addEventListener('pointerdown', (event) => {
+  const cell = getZipCellFromEvent(event);
+  if (!cell || !zipState.current) {
+    return;
+  }
+
+  event.preventDefault();
+  zipDragState.active = true;
+  zipDragState.lastKey = null;
+  zipBoard.setPointerCapture(event.pointerId);
+  handleZipInteraction(cell);
+});
+
+zipBoard.addEventListener('pointermove', (event) => {
+  if (!zipDragState.active || !zipState.current) {
+    return;
+  }
+  const cell = getZipCellFromEvent(event);
+  if (!cell) {
+    return;
+  }
+  handleZipInteraction(cell);
+});
+
+function finishZipPointer(event) {
+  if (!zipDragState.active) {
+    resetZipDragState();
+    return;
+  }
+  zipBoard.releasePointerCapture(event.pointerId);
+  resetZipDragState();
+}
+
+zipBoard.addEventListener('pointerup', finishZipPointer);
+zipBoard.addEventListener('pointercancel', finishZipPointer);
+
+function handleZipInteraction(cell) {
+  if (!zipState.current) {
+    return;
+  }
+
+  const r = Number(cell.dataset.r);
+  const c = Number(cell.dataset.c);
+  const key = cellKey(r, c);
+
+  if (key === zipDragState.lastKey) {
+    return;
+  }
+
+  zipDragState.lastKey = key;
+
+  const puzzle = zipState.current;
+  const path = zipState.path;
+  if (path.length === 0) {
+    zipState.path = [key];
+    updateZipUI();
+    return;
+  }
+
+  const lastKey = path[path.length - 1];
+  if (key === lastKey) {
+    return;
+  }
+
+  const existingIndex = path.indexOf(key);
+  if (existingIndex !== -1) {
+    zipState.path = path.slice(0, existingIndex + 1);
+    updateZipUI();
+    return;
+  }
+
+  const neighbors = puzzle.neighbors.get(lastKey) ?? [];
+  if (!neighbors.includes(key)) {
+    return;
+  }
+
+  zipState.path = [...path, key];
+  updateZipUI();
+}
+
 queensReset.addEventListener('click', () => {
   if (!queensState.current) {
     return;
@@ -617,9 +1061,36 @@ queensHint.addEventListener('click', () => {
 });
 
 queensNext.addEventListener('click', () => {
-  const puzzle = pickNextPuzzle();
+  const puzzle = pickNextPuzzle(queensState);
   if (puzzle) {
     setQueensPuzzle(puzzle);
+  }
+});
+
+zipReset.addEventListener('click', () => {
+  if (!zipState.current) {
+    return;
+  }
+  zipState.path = [];
+  updateZipUI();
+});
+
+zipVerify.addEventListener('click', () => {
+  if (!zipState.current) {
+    return;
+  }
+  const result = validateZipSolution(zipState.current, zipState.path);
+  if (result.ok) {
+    setZipStatus('Bravo, solution correcte !', 'ok');
+  } else {
+    setZipStatus(result.reason ?? 'Solution incorrecte.', 'error');
+  }
+});
+
+zipNext.addEventListener('click', () => {
+  const puzzle = pickNextPuzzle(zipState);
+  if (puzzle) {
+    setZipPuzzle(puzzle);
   }
 });
 
@@ -641,7 +1112,7 @@ async function loadQueens() {
     queensHint.disabled = false;
     queensNext.disabled = false;
 
-    const firstPuzzle = pickNextPuzzle();
+    const firstPuzzle = pickNextPuzzle(queensState);
     if (firstPuzzle) {
       setQueensPuzzle(firstPuzzle);
     }
@@ -651,4 +1122,32 @@ async function loadQueens() {
   }
 }
 
+async function loadZip() {
+  setZipStatus('Chargement des puzzles Zip…');
+  try {
+    const response = await fetch('./data/zip_unique.json');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    if (data.game !== 'zip' || !Array.isArray(data.puzzles)) {
+      throw new Error('Format Zip invalide');
+    }
+
+    zipState.puzzles = data.puzzles.map(normalizeZipPuzzle);
+    zipReset.disabled = false;
+    zipVerify.disabled = false;
+    zipNext.disabled = false;
+
+    const firstPuzzle = pickNextPuzzle(zipState);
+    if (firstPuzzle) {
+      setZipPuzzle(firstPuzzle);
+    }
+  } catch (error) {
+    console.error(error);
+    setZipStatus('Impossible de charger les puzzles Zip.', 'error');
+  }
+}
+
 loadQueens();
+loadZip();
