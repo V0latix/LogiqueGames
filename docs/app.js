@@ -40,6 +40,7 @@ const zipStatus = document.getElementById('zip-status');
 const zipReset = document.getElementById('zip-reset');
 const zipVerify = document.getElementById('zip-verify');
 const zipNext = document.getElementById('zip-next');
+const zipHint = document.getElementById('zip-hint');
 
 const queensState = {
   puzzles: [],
@@ -147,8 +148,11 @@ function normalizeWallKey(aKey, bKey) {
 
 function normalizeZipPuzzle(raw) {
   const numberByKey = new Map();
+  const numberToKey = new Map();
   raw.numbers.forEach(({ k, r, c }) => {
-    numberByKey.set(cellKey(r, c), k);
+    const key = cellKey(r, c);
+    numberByKey.set(key, k);
+    numberToKey.set(k, key);
   });
 
   const walls = new Set();
@@ -185,6 +189,7 @@ function normalizeZipPuzzle(raw) {
   return {
     ...raw,
     numberByKey,
+    numberToKey,
     walls,
     neighbors,
   };
@@ -572,6 +577,109 @@ function updateZipUI() {
   updateZipStatusInfo();
 }
 
+function validateZipPrefix(puzzle, path) {
+  const seen = new Set();
+  let lastKey = null;
+  let maxNumberSeen = 0;
+
+  for (const key of path) {
+    if (seen.has(key)) {
+      return { ok: false, reason: 'Une case est visitee plusieurs fois.', maxNumberSeen };
+    }
+    seen.add(key);
+
+    if (lastKey) {
+      const neighbors = puzzle.neighbors.get(lastKey) ?? [];
+      if (!neighbors.includes(key)) {
+        return {
+          ok: false,
+          reason: 'Le chemin doit rester adjacent et respecter les murs.',
+          maxNumberSeen,
+        };
+      }
+    }
+
+    const number = puzzle.numberByKey.get(key);
+    if (number !== undefined) {
+      if (number !== maxNumberSeen + 1) {
+        return { ok: false, reason: "Les nombres doivent etre visites dans l'ordre.", maxNumberSeen };
+      }
+      maxNumberSeen = number;
+    }
+
+    lastKey = key;
+  }
+
+  return { ok: true, reason: null, maxNumberSeen };
+}
+
+function orderZipNeighbors(neighbors, puzzle, visited, maxNumberSeen) {
+  const nextNumber = maxNumberSeen + 1;
+  return neighbors
+    .filter((key) => !visited.has(key))
+    .map((key) => {
+      const number = puzzle.numberByKey.get(key);
+      const priority = number === nextNumber ? -100 : 0;
+      const degree = (puzzle.neighbors.get(key) ?? []).filter((n) => !visited.has(n)).length;
+      return { key, score: priority + degree };
+    })
+    .sort((a, b) => a.score - b.score)
+    .map((entry) => entry.key);
+}
+
+function solveZip(puzzle, prefixPath) {
+  const total = puzzle.n * puzzle.n;
+  let path = [...prefixPath];
+  let visited = new Set(path);
+
+  if (path.length === 0) {
+    const startKey = puzzle.numberToKey.get(1);
+    if (!startKey) {
+      return null;
+    }
+    path = [startKey];
+    visited = new Set(path);
+  }
+
+  const validation = validateZipPrefix(puzzle, path);
+  if (!validation.ok) {
+    return null;
+  }
+
+  function dfs(currentPath, currentVisited, maxNumberSeen) {
+    if (currentPath.length === total) {
+      return [...currentPath];
+    }
+
+    const currentKey = currentPath[currentPath.length - 1];
+    const neighbors = puzzle.neighbors.get(currentKey) ?? [];
+    const ordered = orderZipNeighbors(neighbors, puzzle, currentVisited, maxNumberSeen);
+
+    for (const nextKey of ordered) {
+      const number = puzzle.numberByKey.get(nextKey);
+      if (number !== undefined && number !== maxNumberSeen + 1) {
+        continue;
+      }
+      const nextMax = number ?? maxNumberSeen;
+
+      currentVisited.add(nextKey);
+      currentPath.push(nextKey);
+
+      const result = dfs(currentPath, currentVisited, nextMax);
+      if (result) {
+        return result;
+      }
+
+      currentPath.pop();
+      currentVisited.delete(nextKey);
+    }
+
+    return null;
+  }
+
+  return dfs(path, visited, validation.maxNumberSeen);
+}
+
 function validateQueensSolution(puzzle, queensSet) {
   const n = puzzle.n;
   const positions = [];
@@ -671,16 +779,15 @@ function validateZipSolution(puzzle, path) {
     positions.set(key, index);
   });
 
-  const numbers = Array.from(puzzle.numberByKey.values());
+  const numbers = Array.from(puzzle.numberToKey.keys());
   const maxNumber = numbers.length ? Math.max(...numbers) : 0;
 
   let lastIndex = -1;
   for (let k = 1; k <= maxNumber; k += 1) {
-    const entry = Array.from(puzzle.numberByKey.entries()).find(([, value]) => value === k);
-    if (!entry) {
+    const key = puzzle.numberToKey.get(k);
+    if (!key) {
       return { ok: false, reason: `Nombre ${k} manquant.` };
     }
-    const key = entry[0];
     const idx = positions.get(key);
     if (idx === undefined) {
       return { ok: false, reason: `Le nombre ${k} n'est pas visite.` };
@@ -786,6 +893,46 @@ function applyQueensHint() {
   }
 
   setQueensStatus('Toutes les reines sont deja placees.', 'ok');
+}
+
+function applyZipHint() {
+  const puzzle = zipState.current;
+  if (!puzzle) {
+    return;
+  }
+
+  const prefix = [...zipState.path];
+  const validation = validateZipPrefix(puzzle, prefix);
+  if (!validation.ok) {
+    setZipStatus(validation.reason ?? 'Chemin invalide.', 'error');
+    return;
+  }
+
+  if (prefix.length === 0) {
+    const startKey = puzzle.numberToKey.get(1);
+    if (startKey) {
+      zipState.path = [startKey];
+      updateZipUI();
+      setZipStatus('Indice applique : depart place.', 'ok');
+      return;
+    }
+  }
+
+  const solution = solveZip(puzzle, prefix);
+  if (!solution) {
+    setZipStatus('Indice indisponible pour ce chemin.', 'error');
+    return;
+  }
+
+  if (solution.length <= prefix.length) {
+    setZipStatus('Toutes les cases sont deja remplies.', 'ok');
+    return;
+  }
+
+  const nextKey = solution[prefix.length];
+  zipState.path = [...prefix, nextKey];
+  updateZipUI();
+  setZipStatus('Indice applique : etape suivante ajoutee.', 'ok');
 }
 
 function setQueensPuzzle(puzzle) {
@@ -1075,6 +1222,10 @@ zipReset.addEventListener('click', () => {
   updateZipUI();
 });
 
+zipHint.addEventListener('click', () => {
+  applyZipHint();
+});
+
 zipVerify.addEventListener('click', () => {
   if (!zipState.current) {
     return;
@@ -1138,6 +1289,7 @@ async function loadZip() {
     zipReset.disabled = false;
     zipVerify.disabled = false;
     zipNext.disabled = false;
+    zipHint.disabled = false;
 
     const firstPuzzle = pickNextPuzzle(zipState);
     if (firstPuzzle) {
