@@ -43,7 +43,7 @@ Generer le rapport data science enrichi :
 ```bash
 .venv/bin/python scripts/make_queens_report.py \
   --runs data/benchmarks/queens_runs.jsonl \
-  --manifest data/puzzles_unique.json \
+  --manifest data/queens_unique.json \
   --out reports/queens_report.md \
   --figdir reports/figures
 ```

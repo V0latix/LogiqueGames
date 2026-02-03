@@ -437,7 +437,7 @@
 - timeout: `timeout == True` in runs JSONL
 - time percentiles: computed on solved-only unless noted
 - runs source file: `data/benchmarks/queens_runs.jsonl`
-- puzzle manifest: `data/puzzles_unique.json`
+- puzzle manifest: `data/queens_unique.json`
 - python: 3.14.2
 - platform: macOS-15.7.3-arm64-arm-64bit-Mach-O
 - processor: arm

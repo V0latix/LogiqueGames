@@ -310,7 +310,7 @@ def main() -> None:
     parser.add_argument(
         "--manifest",
         type=Path,
-        default=Path("data/puzzles_unique.json"),
+        default=Path("data/queens_unique.json"),
         help="Puzzle manifest with regions and sources.",
     )
     parser.add_argument(
