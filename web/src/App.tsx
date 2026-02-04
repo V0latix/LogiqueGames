@@ -35,22 +35,64 @@ type ZipPuzzleNormalized = ZipPuzzle & {
   neighbors: Map<CellKey, CellKey[]>;
 };
 
-const QUEENS_PALETTE = [
-  '#e7f27c',
-  '#ff8a73',
-  '#b9e6a5',
-  '#e6e3e0',
-  '#9fc4ff',
-  '#c7b0ea',
-  '#ffd2a1',
-  '#f3b7d4',
-  '#b8f1ed',
-  '#d9f7a1',
-];
 
 const ZIP_COLOR = 'var(--zip-path)';
 const ZIP_STROKE = 'var(--zip-stroke)';
 const ZIP_NODE = 'var(--zip-node)';
+
+type StatsSnapshot = {
+  queensCompleted: number;
+  zipCompleted: number;
+  streakCount: number;
+  lastCompletionDate: string | null;
+};
+
+const STATS_KEY = 'linkedin-games-stats';
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateKey(key: string) {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function isYesterday(lastKey: string, todayKey: string) {
+  const lastDate = parseDateKey(lastKey);
+  const todayDate = parseDateKey(todayKey);
+  lastDate.setDate(lastDate.getDate() + 1);
+  return lastDate.getTime() === todayDate.getTime();
+}
+
+function loadStats(): StatsSnapshot {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    if (!raw) {
+      return { queensCompleted: 0, zipCompleted: 0, streakCount: 0, lastCompletionDate: null };
+    }
+    const parsed = JSON.parse(raw) as StatsSnapshot;
+    return {
+      queensCompleted: parsed.queensCompleted ?? 0,
+      zipCompleted: parsed.zipCompleted ?? 0,
+      streakCount: parsed.streakCount ?? 0,
+      lastCompletionDate: parsed.lastCompletionDate ?? null,
+    };
+  } catch {
+    return { queensCompleted: 0, zipCompleted: 0, streakCount: 0, lastCompletionDate: null };
+  }
+}
+
+function saveStats(stats: StatsSnapshot) {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  } catch {
+    // Ignore write errors.
+  }
+}
 
 function cellKey(r: number, c: number): CellKey {
   return `${r},${c}`;
@@ -74,8 +116,10 @@ function normalizeQueensPuzzle(puzzle: QueensPuzzle): QueensPuzzleNormalized {
 
   const ids = Array.from(regionIds).sort((a, b) => a - b);
   const regionColors = new Map<number, string>();
+  const count = ids.length || 1;
   ids.forEach((id, index) => {
-    regionColors.set(id, QUEENS_PALETTE[index % QUEENS_PALETTE.length]);
+    const hue = Math.round((index * 360) / count);
+    regionColors.set(id, `hsl(${hue} 70% 72%)`);
   });
 
   return {
@@ -558,6 +602,9 @@ export default function App() {
   const [zipPath, setZipPath] = useState<CellKey[]>([]);
   const [zipStatus, setZipStatus] = useState('Chargement…');
   const [zipStatusType, setZipStatusType] = useState<'ok' | 'warn' | 'error' | null>(null);
+  const [stats, setStats] = useState<StatsSnapshot>(() => loadStats());
+  const [queensSolved, setQueensSolved] = useState(false);
+  const [zipSolved, setZipSolved] = useState(false);
 
   const queensDrag = useRef({
     active: false,
@@ -573,6 +620,9 @@ export default function App() {
     lastKey: null as CellKey | null,
   });
 
+  const queensCountedRef = useRef<number | null>(null);
+  const zipCountedRef = useRef<number | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     fetch('./data/queens_unique.json')
@@ -587,6 +637,7 @@ export default function App() {
           setQueensPuzzle(puzzle);
           setQueensIndex(index);
           setQueensPlaced(new Set(puzzle.givensQueens));
+          queensCountedRef.current = null;
         }
       })
       .catch(() => {
@@ -612,6 +663,7 @@ export default function App() {
         if (index !== null) {
           setZipPuzzle(puzzles[index]);
           setZipIndex(index);
+          zipCountedRef.current = null;
         }
       })
       .catch(() => {
@@ -638,9 +690,14 @@ export default function App() {
       placed === total &&
       queensConflicts.size === 0 &&
       validateQueensSolution(queensPuzzle, queensPlaced).ok;
+    setQueensSolved(solved);
     if (solved) {
-      setQueensStatus("C'est bien, t'as réussi. Clique sur \"Puzzle suivant\".");
+      setQueensStatus('Bravo, puzzle terminé.');
       setQueensStatusType('ok');
+      if (queensCountedRef.current !== queensPuzzle.id) {
+        recordCompletion('queens');
+        queensCountedRef.current = queensPuzzle.id;
+      }
       return;
     }
     let message = `Puzzle ${queensPuzzle.id} · ${queensPuzzle.n}x${queensPuzzle.n}. Reines: ${placed}/${total}.`;
@@ -658,9 +715,14 @@ export default function App() {
     const total = zipPuzzle.n * zipPuzzle.n;
     const placed = zipPath.length;
     const solved = placed === total && validateZipSolution(zipPuzzle, zipPath).ok;
+    setZipSolved(solved);
     if (solved) {
-      setZipStatus("C'est bien, t'as réussi. Clique sur \"Puzzle suivant\".");
+      setZipStatus('Bravo, puzzle terminé.');
       setZipStatusType('ok');
+      if (zipCountedRef.current !== zipPuzzle.id) {
+        recordCompletion('zip');
+        zipCountedRef.current = zipPuzzle.id;
+      }
       return;
     }
     setZipStatus(`Puzzle ${zipPuzzle.id} · ${zipPuzzle.n}x${zipPuzzle.n}. Parcours: ${placed}/${total}.`);
@@ -675,6 +737,40 @@ export default function App() {
       index = Math.floor(Math.random() * list.length);
     }
     return index;
+  }
+
+  function recordCompletion(game: 'queens' | 'zip') {
+    const todayKey = formatDateKey(new Date());
+    setStats((prev) => {
+      const next: StatsSnapshot = {
+        queensCompleted: prev.queensCompleted,
+        zipCompleted: prev.zipCompleted,
+        streakCount: prev.streakCount,
+        lastCompletionDate: prev.lastCompletionDate,
+      };
+
+      if (game === 'queens') {
+        next.queensCompleted += 1;
+      } else {
+        next.zipCompleted += 1;
+      }
+
+      if (!prev.lastCompletionDate) {
+        next.streakCount = 1;
+        next.lastCompletionDate = todayKey;
+      } else if (prev.lastCompletionDate === todayKey) {
+        next.lastCompletionDate = todayKey;
+      } else if (isYesterday(prev.lastCompletionDate, todayKey)) {
+        next.streakCount = prev.streakCount + 1;
+        next.lastCompletionDate = todayKey;
+      } else {
+        next.streakCount = 1;
+        next.lastCompletionDate = todayKey;
+      }
+
+      saveStats(next);
+      return next;
+    });
   }
 
   function resetQueens(puzzle: QueensPuzzleNormalized) {
@@ -790,18 +886,6 @@ export default function App() {
     }
   }
 
-  function handleQueensVerify() {
-    if (!queensPuzzle) return;
-    const result = validateQueensSolution(queensPuzzle, queensPlaced);
-    if (result.ok) {
-      setQueensStatus('Bravo, solution correcte !');
-      setQueensStatusType('ok');
-    } else {
-      setQueensStatus(result.reason ?? 'Solution incorrecte.');
-      setQueensStatusType('error');
-    }
-  }
-
   function handleQueensNext() {
     const index = pickNextIndex(queensIndex, queensPuzzles);
     if (index === null) return;
@@ -809,6 +893,8 @@ export default function App() {
     setQueensPuzzle(puzzle);
     setQueensIndex(index);
     resetQueens(puzzle);
+    setQueensSolved(false);
+    queensCountedRef.current = null;
   }
 
   function handleZipPointerDown(event: React.PointerEvent) {
@@ -899,24 +985,14 @@ export default function App() {
     setZipStatusType('ok');
   }
 
-  function handleZipVerify() {
-    if (!zipPuzzle) return;
-    const result = validateZipSolution(zipPuzzle, zipPath);
-    if (result.ok) {
-      setZipStatus('Bravo, solution correcte !');
-      setZipStatusType('ok');
-    } else {
-      setZipStatus(result.reason ?? 'Solution incorrecte.');
-      setZipStatusType('error');
-    }
-  }
-
   function handleZipNext() {
     const index = pickNextIndex(zipIndex, zipPuzzles);
     if (index === null) return;
     setZipPuzzle(zipPuzzles[index]);
     setZipIndex(index);
     setZipPath([]);
+    setZipSolved(false);
+    zipCountedRef.current = null;
   }
 
   function handleZipReset() {
@@ -1035,19 +1111,19 @@ export default function App() {
       <header className="topbar">
         <div className="brand">
           <span className="brand-dot" />
-          <div>
-            <div className="brand-title">LinkedIn Games</div>
-            <div className="brand-subtitle">Puzzles jouables - Queens &amp; Zip</div>
-          </div>
         </div>
         <div className="topbar-stats">
           <div className="topbar-chip">
-            <span className="topbar-chip-label">Puzzles terminés</span>
-            <span className="topbar-chip-value">12</span>
+            <span className="topbar-chip-label">Queens terminés</span>
+            <span className="topbar-chip-value">{stats.queensCompleted}</span>
+          </div>
+          <div className="topbar-chip">
+            <span className="topbar-chip-label">Zip terminés</span>
+            <span className="topbar-chip-value">{stats.zipCompleted}</span>
           </div>
           <div className="topbar-chip">
             <span className="topbar-chip-label">Série de jours</span>
-            <span className="topbar-chip-value">5</span>
+            <span className="topbar-chip-value">{stats.streakCount}</span>
           </div>
         </div>
         <nav className="tabs">
@@ -1096,25 +1172,31 @@ export default function App() {
                 </div>
               </section>
               <aside className="panel side-panel">
-                <div className="panel-actions vertical">
-                  <button className="secondary" type="button" onClick={handleQueensNext} disabled={!queensPuzzle}>
-                    Puzzle suivant
-                  </button>
-                  <button
-                    className="secondary"
-                    type="button"
-                    onClick={() => queensPuzzle && resetQueens(queensPuzzle)}
-                    disabled={!queensPuzzle}
-                  >
-                    Réinitialiser
-                  </button>
-                  <button className="secondary" type="button" onClick={handleQueensHint} disabled={!queensPuzzle}>
-                    Hint
-                  </button>
-                  <button className="primary" type="button" onClick={handleQueensVerify} disabled={!queensPuzzle}>
-                    Vérifier
-                  </button>
-                </div>
+                {queensSolved ? (
+                  <div className="success-panel">
+                    <div className="success-message">Bravo, puzzle terminé.</div>
+                    <button className="cta-large" type="button" onClick={handleQueensNext} disabled={!queensPuzzle}>
+                      Nouveau puzzle
+                    </button>
+                  </div>
+                ) : (
+                  <div className="panel-actions vertical">
+                    <button className="secondary" type="button" onClick={handleQueensNext} disabled={!queensPuzzle}>
+                      Puzzle suivant
+                    </button>
+                    <button
+                      className="secondary"
+                      type="button"
+                      onClick={() => queensPuzzle && resetQueens(queensPuzzle)}
+                      disabled={!queensPuzzle}
+                    >
+                      Réinitialiser
+                    </button>
+                    <button className="secondary" type="button" onClick={handleQueensHint} disabled={!queensPuzzle}>
+                      Hint
+                    </button>
+                  </div>
+                )}
                 <div className={`panel-status ${queensStatusType ?? ''}`}>{queensStatus}</div>
                 <div className="panel-note">
                   Clique sur une case pour placer une croix, puis reclique pour poser une reine.
@@ -1149,20 +1231,26 @@ export default function App() {
                 </div>
               </section>
               <aside className="panel side-panel">
-                <div className="panel-actions vertical">
-                  <button className="secondary" type="button" onClick={handleZipNext} disabled={!zipPuzzle}>
-                    Puzzle suivant
-                  </button>
-                  <button className="secondary" type="button" onClick={handleZipReset} disabled={!zipPuzzle}>
-                    Réinitialiser
-                  </button>
-                  <button className="secondary" type="button" onClick={handleZipHint} disabled={!zipPuzzle}>
-                    Hint
-                  </button>
-                  <button className="primary" type="button" onClick={handleZipVerify} disabled={!zipPuzzle}>
-                    Vérifier
-                  </button>
-                </div>
+                {zipSolved ? (
+                  <div className="success-panel">
+                    <div className="success-message">Bravo, puzzle terminé.</div>
+                    <button className="cta-large" type="button" onClick={handleZipNext} disabled={!zipPuzzle}>
+                      Nouveau puzzle
+                    </button>
+                  </div>
+                ) : (
+                  <div className="panel-actions vertical">
+                    <button className="secondary" type="button" onClick={handleZipNext} disabled={!zipPuzzle}>
+                      Puzzle suivant
+                    </button>
+                    <button className="secondary" type="button" onClick={handleZipReset} disabled={!zipPuzzle}>
+                      Réinitialiser
+                    </button>
+                    <button className="secondary" type="button" onClick={handleZipHint} disabled={!zipPuzzle}>
+                      Hint
+                    </button>
+                  </div>
+                )}
                 <div className={`panel-status ${zipStatusType ?? ''}`}>{zipStatus}</div>
                 <div className="panel-note">
                   Clique et glisse pour tracer un chemin qui passe par tous les numéros.

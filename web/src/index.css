@@ -208,6 +208,35 @@ button.secondary:hover {
   color: var(--muted);
 }
 
+.success-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.success-message {
+  font-size: 14px;
+  color: #c9f2da;
+}
+
+.cta-large {
+  background: linear-gradient(135deg, #4cc9f0, #56f0c2);
+  color: #05131f;
+  border: none;
+  padding: 14px 22px;
+  font-weight: 700;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 220px;
+  cursor: pointer;
+}
+
+.cta-large:hover {
+  background: linear-gradient(135deg, #41b9dc, #4bd8ab);
+}
+
 .board {
   background: var(--card);
   border-radius: var(--radius);
@@ -284,7 +313,8 @@ button.secondary:hover {
 
 .cell.blocked {
   background: #0e131d;
-  color: #dfe5ef;
+  color: #0b0f1a;
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.65);
   cursor: not-allowed;
 }
 
@@ -294,10 +324,11 @@ button.secondary:hover {
 
 .cell.queen {
   color: #0b0f1a;
+  font-size: 30px;
 }
 
 .cell.mark {
-  color: #4c5b6d;
+  color: #0b0f1a;
   font-weight: 600;
 }
 
