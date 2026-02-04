@@ -1,15 +1,16 @@
 :root {
-  color-scheme: light;
-  --bg: #f6f2ee;
-  --card: #ffffff;
-  --text: #1f2328;
-  --muted: #5c6c77;
-  --border: #d0d7de;
-  --ink: #111111;
-  --primary: #0a66c2;
-  --primary-dark: #004182;
-  --shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-  --radius: 16px;
+  color-scheme: dark;
+  --bg: #0b111b;
+  --bg-gradient: radial-gradient(circle at top, #111c2f 0%, #0b111b 55%);
+  --card: #141c2b;
+  --card-strong: #182338;
+  --text: #f2f4f8;
+  --muted: #9aa4b2;
+  --border: rgba(255, 255, 255, 0.08);
+  --primary: #4cc9f0;
+  --primary-dark: #2a9cc0;
+  --shadow: 0 18px 40px rgba(6, 12, 20, 0.45);
+  --radius: 18px;
 }
 
 * {
@@ -20,7 +21,7 @@ body {
   margin: 0;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   color: var(--text);
-  background: var(--bg);
+  background: var(--bg-gradient);
 }
 
 .app {
@@ -32,8 +33,9 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 20px 32px;
-  background: var(--card);
+  background: rgba(10, 16, 26, 0.9);
   border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -49,7 +51,7 @@ body {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: var(--primary);
+  background: linear-gradient(135deg, #4cc9f0, #6a5bff);
   display: inline-block;
 }
 
@@ -70,7 +72,7 @@ body {
 
 .tab {
   border: 1px solid var(--border);
-  background: var(--card);
+  background: rgba(20, 28, 43, 0.8);
   color: var(--text);
   padding: 10px 18px;
   border-radius: 999px;
@@ -79,7 +81,7 @@ body {
 
 .tab.active {
   background: var(--primary);
-  color: #ffffff;
+  color: #0b111b;
   border-color: var(--primary);
 }
 
@@ -142,7 +144,7 @@ button.secondary {
 
 button.primary {
   background: var(--primary);
-  color: #fff;
+  color: #0b111b;
 }
 
 button.primary:hover {
@@ -150,19 +152,19 @@ button.primary:hover {
 }
 
 button.secondary {
-  background: #eef2f6;
+  background: #1b2437;
   color: var(--text);
 }
 
 button.secondary:hover {
-  background: #e2e8f0;
+  background: #23304a;
 }
 
 .panel-status {
   margin-top: 12px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: #f5f7fa;
+  background: #1c2538;
   border: 1px solid var(--border);
   font-size: 13px;
   color: var(--muted);
@@ -214,4 +216,91 @@ button.secondary:hover {
   justify-content: center;
   color: var(--muted);
   font-size: 14px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  background: var(--card-strong);
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.card-text {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.cta {
+  background: linear-gradient(135deg, #4cc9f0, #56f0c2);
+  color: #05131f;
+  border: none;
+  padding: 12px 16px;
+  font-weight: 700;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.cta:hover {
+  background: linear-gradient(135deg, #41b9dc, #4bd8ab);
+}
+
+@media (max-width: 1100px) {
+  .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
 }

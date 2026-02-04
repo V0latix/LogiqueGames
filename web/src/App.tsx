@@ -34,6 +34,65 @@ export default function App() {
       </header>
 
       <main className="page">
+        <section className="panel">
+          <div className="view-header">
+            <h1>Tableau de bord</h1>
+            <p>Un aperçu rapide de la progression et des actions disponibles.</p>
+          </div>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-label">Puzzles terminés</div>
+              <div className="stat-value">12</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">Temps moyen</div>
+              <div className="stat-value">04:32</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">Série actuelle</div>
+              <div className="stat-value">5 jours</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">Niveau</div>
+              <div className="stat-value">Intermédiaire</div>
+            </div>
+          </div>
+        </section>
+
+        <div style={{ height: 20 }} />
+
+        <section className="card-grid">
+          <div className="card">
+            <div className="card-title">Démarrer un puzzle</div>
+            <div className="card-text">
+              Lance immédiatement une nouvelle grille avec les dernières règles configurées.
+            </div>
+            <button className="cta" type="button">
+              Continuer
+            </button>
+          </div>
+          <div className="card">
+            <div className="card-title">Statistiques avancées</div>
+            <div className="card-text">
+              Analyse tes performances et identifie les patterns de résolution.
+            </div>
+            <button className="secondary" type="button">
+              Voir le détail
+            </button>
+          </div>
+          <div className="card">
+            <div className="card-title">Mode focus</div>
+            <div className="card-text">
+              Une interface épurée pour résoudre sans distraction.
+            </div>
+            <button className="secondary" type="button">
+              Activer
+            </button>
+          </div>
+        </section>
+
+        <div style={{ height: 28 }} />
+
         {view === 'queens' ? (
           <section className="view">
             <div className="view-header">
