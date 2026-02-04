@@ -701,6 +701,7 @@ export default function App() {
   function markQueensCell(key: CellKey, puzzle: QueensPuzzleNormalized) {
     if (puzzle.blocked.has(key) || puzzle.givensQueens.has(key)) return false;
     if (queensPlaced.has(key)) return false;
+    if (queensMarks.has(key)) return false;
     const nextMarks = new Set(queensMarks);
     nextMarks.add(key);
     setQueensMarks(nextMarks);
