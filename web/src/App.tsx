@@ -330,8 +330,8 @@ function validateZipPrefix(puzzle: ZipPuzzleNormalized, path: CellKey[]) {
     seen.add(key);
 
     if (lastKey) {
-      const neighbors = puzzle.neighbors.get(lastKey) ?? [];
-      if (!neighbors.includes(key)) {
+      const neighborList: CellKey[] = puzzle.neighbors.get(lastKey) ?? [];
+      if (!neighborList.includes(key)) {
         return {
           ok: false,
           reason: 'Le chemin doit rester adjacent et respecter les murs.',
@@ -398,8 +398,8 @@ function solveZip(puzzle: ZipPuzzleNormalized, prefixPath: CellKey[]) {
     }
 
     const currentKey = currentPath[currentPath.length - 1];
-    const neighbors = puzzle.neighbors.get(currentKey) ?? [];
-    const ordered = orderZipNeighbors(neighbors, puzzle, currentVisited, maxNumberSeen);
+    const neighborList: CellKey[] = puzzle.neighbors.get(currentKey) ?? [];
+    const ordered = orderZipNeighbors(neighborList, puzzle, currentVisited, maxNumberSeen);
 
     for (const nextKey of ordered) {
       const number = puzzle.numberByKey.get(nextKey);
@@ -441,8 +441,8 @@ function validateZipSolution(puzzle: ZipPuzzleNormalized, path: CellKey[]) {
 
     if (i > 0) {
       const prev = path[i - 1];
-      const neighbors = puzzle.neighbors.get(prev) ?? [];
-      if (!neighbors.includes(key)) {
+      const neighborList: CellKey[] = puzzle.neighbors.get(prev) ?? [];
+      if (!neighborList.includes(key)) {
         return { ok: false, reason: 'Le chemin doit rester adjacent et respecter les murs.' };
       }
     }
@@ -845,8 +845,8 @@ export default function App() {
       setZipPath(zipPath.slice(0, existingIndex + 1));
       return;
     }
-    const neighbors = zipPuzzle.neighbors.get(lastKey) ?? [];
-    if (!neighbors.includes(key)) {
+    const neighborList: CellKey[] = zipPuzzle.neighbors.get(lastKey) ?? [];
+    if (!neighborList.includes(key)) {
       return;
     }
     setZipPath([...zipPath, key]);
