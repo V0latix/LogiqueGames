@@ -234,12 +234,6 @@ button.secondary:hover {
   color: #f9b0b0;
 }
 
-.panel-note {
-  margin-top: 12px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
 .success-panel {
   display: flex;
   flex-direction: column;
@@ -443,20 +437,52 @@ button.secondary:hover {
   }
 
   .topbar {
-    padding: 14px 16px;
+    padding: 10px 12px;
+    gap: 8px;
+    align-items: center;
   }
 
-  .topbar-stats,
-  .tabs {
-    width: 100%;
+  .topbar-stats {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    gap: 6px;
+    padding-bottom: 2px;
+  }
+
+  .topbar-stats::-webkit-scrollbar {
+    display: none;
+  }
+
+  .topbar-chip {
+    padding: 4px 8px;
+    gap: 6px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .topbar-chip-label {
+    font-size: 11px;
+  }
+
+  .topbar-chip-value {
+    font-size: 13px;
   }
 
   .tabs {
-    justify-content: stretch;
+    width: auto;
+    flex-wrap: nowrap;
+    gap: 6px;
+    flex: 0 0 auto;
   }
 
   .tab {
-    flex: 1;
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 8px 12px;
   }
 
   .page {

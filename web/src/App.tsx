@@ -1141,7 +1141,6 @@ export default function App() {
           <section className="view">
             <div className="view-header">
               <h1>Queens</h1>
-              <p>Place une reine par ligne, colonne et région, sans contact adjacent.</p>
             </div>
             <div className="layout">
               <section className="board" aria-label="Grille Queens">
@@ -1190,9 +1189,6 @@ export default function App() {
                   </div>
                 )}
                 <div className={`panel-status ${queensStatusType ?? ''}`}>{queensStatus}</div>
-                <div className="panel-note">
-                  Clique sur une case pour placer une croix, puis reclique pour poser une reine.
-                </div>
               </aside>
             </div>
           </section>
@@ -1200,7 +1196,6 @@ export default function App() {
           <section className="view">
             <div className="view-header">
               <h1>Zip</h1>
-              <p>Relie toutes les cases en respectant les murs et les numéros.</p>
             </div>
             <div className="layout">
               <section className="board" aria-label="Grille Zip">
@@ -1244,9 +1239,6 @@ export default function App() {
                   </div>
                 )}
                 <div className={`panel-status ${zipStatusType ?? ''}`}>{zipStatus}</div>
-                <div className="panel-note">
-                  Clique et glisse pour tracer un chemin qui passe par tous les numéros.
-                </div>
               </aside>
             </div>
           </section>
