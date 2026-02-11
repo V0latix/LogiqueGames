@@ -395,19 +395,19 @@ button.secondary:hover {
 }
 
 .zip-cell.wall-top {
-  border-top: 4px solid #9d9d9d;
+  border-top: 4px solid #000000;
 }
 
 .zip-cell.wall-right {
-  border-right: 4px solid #9d9d9d;
+  border-right: 4px solid #000000;
 }
 
 .zip-cell.wall-bottom {
-  border-bottom: 4px solid #9d9d9d;
+  border-bottom: 4px solid #000000;
 }
 
 .zip-cell.wall-left {
-  border-left: 4px solid #9d9d9d;
+  border-left: 4px solid #000000;
 }
 
 .placeholder {
