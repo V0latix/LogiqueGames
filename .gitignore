@@ -1,4 +1,6 @@
 .DS_Store
+.claude/
+CLAUDE-INSTALLED.md
 .env
 .env.*.local
 *.log
@@ -6,3 +8,23 @@
 node_modules/
 web/node_modules/
 web/.vite/
+
+__pycache__/
+*.pyc
+
+# Large/generated assets for the Zip extraction pipeline
+zip_archive/raw_videos/*
+!zip_archive/raw_videos/.gitkeep
+zip_archive/frames/*
+!zip_archive/frames/.gitkeep
+zip_archive/candidates/*
+!zip_archive/candidates/.gitkeep
+zip_archive/grids/*
+!zip_archive/grids/.gitkeep
+zip_archive/puzzles_zip/*
+!zip_archive/puzzles_zip/.gitkeep
+zip_archive/metadata/*.json
+zip_archive/metadata/*.html
+zip_archive/metadata/*.zip
+zip_archive/metadata/*.txt
+!zip_archive/metadata/.gitkeep
