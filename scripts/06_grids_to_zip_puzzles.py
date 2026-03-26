@@ -122,6 +122,132 @@ def regularize_line_spacing(lines: list[float], axis_limit: int) -> list[float]:
     return dense
 
 
+def _dark_run(arr: np.ndarray, center: int, thresh: int, max_half: int) -> int:
+    """Width of the dark run (pixel value <= thresh) centered near `center` in a 1-D array."""
+    n = len(arr)
+    if n == 0:
+        return 0
+    center = max(0, min(n - 1, center))
+
+    # Walk up to ±3 px to find a dark pixel if center is not dark.
+    if arr[center] > thresh:
+        for delta in range(1, 4):
+            lo, hi = center - delta, center + delta
+            if lo >= 0 and arr[lo] <= thresh:
+                center = lo
+                break
+            if hi < n and arr[hi] <= thresh:
+                center = hi
+                break
+        else:
+            return 0
+
+    left = center
+    while left > max(0, center - max_half) and arr[left] <= thresh:
+        left -= 1
+    right = center
+    while right < min(n - 1, center + max_half) and arr[right] <= thresh:
+        right += 1
+    return right - left
+
+
+def _edge_thickness(
+    gray: np.ndarray,
+    axis: int,
+    line_pos: float,
+    span_start: float,
+    span_end: float,
+    dark_thresh: int = 80,
+    n_samples: int = 7,
+    max_half: int = 12,
+) -> float:
+    """Median dark-run thickness for one interior grid edge.
+
+    axis=0: horizontal edge (line_pos is a y-coordinate; profile is vertical).
+    axis=1: vertical edge   (line_pos is an x-coordinate; profile is horizontal).
+    span_start / span_end delimit the cell extent perpendicular to the edge.
+    """
+    h, w = gray.shape
+    runs: list[int] = []
+
+    for t in np.linspace(0.2, 0.8, n_samples):
+        cross = span_start * (1 - t) + span_end * t
+
+        if axis == 0:
+            x = max(0, min(w - 1, int(round(cross))))
+            yc = int(round(line_pos))
+            y0, y1 = max(0, yc - max_half), min(h, yc + max_half + 1)
+            profile = gray[y0:y1, x]
+            center_in = yc - y0
+        else:
+            y = max(0, min(h - 1, int(round(cross))))
+            xc = int(round(line_pos))
+            x0, x1 = max(0, xc - max_half), min(w, xc + max_half + 1)
+            profile = gray[y, x0:x1]
+            center_in = xc - x0
+
+        runs.append(_dark_run(profile, center_in, dark_thresh, max_half))
+
+    return float(np.median(runs)) if runs else 0.0
+
+
+def detect_walls(
+    gray: np.ndarray,
+    xs: list[float],
+    ys: list[float],
+    n: int,
+    dark_thresh: int = 80,
+    wall_ratio: float = 2.2,
+) -> list[dict]:
+    """Detect walls between adjacent cells using line-thickness analysis.
+
+    For every interior edge, measure the perpendicular dark-pixel run width.
+    An edge is classified as a wall when its thickness is >= wall_ratio * median
+    thickness across all interior edges.
+
+    Returns a sorted list of {"r1", "c1", "r2", "c2"} dicts where (r1,c1) and
+    (r2,c2) are the two cells on either side of the wall.
+    """
+    if len(xs) < 2 or len(ys) < 2 or n < 2:
+        return []
+
+    thicknesses: dict[tuple, float] = {}
+
+    # Horizontal edges: interior horizontal lines at ys[1] … ys[n-1]
+    for r in range(n - 1):
+        y_line = ys[r + 1]
+        for c in range(n):
+            t = _edge_thickness(gray, 0, y_line, xs[c], xs[c + 1], dark_thresh)
+            thicknesses[("h", r, c)] = t
+
+    # Vertical edges: interior vertical lines at xs[1] … xs[n-1]
+    for r in range(n):
+        for c in range(n - 1):
+            x_line = xs[c + 1]
+            t = _edge_thickness(gray, 1, x_line, ys[r], ys[r + 1], dark_thresh)
+            thicknesses[("v", r, c)] = t
+
+    if not thicknesses:
+        return []
+
+    median_t = float(np.median(list(thicknesses.values())))
+    if median_t <= 0:
+        return []
+
+    wall_thresh = median_t * wall_ratio
+    walls: list[dict] = []
+
+    for (axis, r, c), t in thicknesses.items():
+        if t < wall_thresh:
+            continue
+        if axis == "h":
+            walls.append({"r1": r, "c1": c, "r2": r + 1, "c2": c})
+        else:
+            walls.append({"r1": r, "c1": c, "r2": r, "c2": c + 1})
+
+    return sorted(walls, key=lambda w: (w["r1"], w["c1"], w["r2"], w["c2"]))
+
+
 def detect_circles(gray: np.ndarray) -> list[Circle]:
     # Black circular checkpoints in the puzzle are very dark compared to the board.
     dark = (gray < 55).astype(np.uint8) * 255
@@ -414,6 +540,8 @@ def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = 
             "error": f"unable to infer grid size ({len(xs)=}, {len(ys)=})",
         }
 
+    walls = detect_walls(gray, xs, ys, n)
+
     circles = detect_circles(gray)
     if not circles:
         return {
@@ -456,7 +584,7 @@ def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = 
         "game": "zip",
         "n": int(n),
         "numbers": numbers,
-        "walls": [],
+        "walls": walls,
         "meta": {
             "video_id": entry.get("video_id"),
             "playlist_index": entry.get("playlist_index"),

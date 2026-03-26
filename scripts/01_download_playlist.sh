@@ -3,13 +3,14 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Download a YouTube playlist into zip_archive/raw_videos.
+Download a YouTube playlist into <output-dir>/raw_videos.
 
 Usage:
-  scripts/01_download_playlist.sh --playlist-url URL [--limit N] [--max-height 720] [--force]
+  scripts/01_download_playlist.sh --playlist-url URL [--output-dir DIR] [--limit N] [--max-height 720] [--force]
 
 Options:
   --playlist-url URL   YouTube playlist URL (or export PLAYLIST_URL first)
+  --output-dir DIR     Base archive directory (default: zip_archive)
   --limit N            Download only first N videos from playlist
   --max-height H       Max video height (default: 720)
   --force              Overwrite existing outputs
@@ -18,6 +19,7 @@ EOF
 }
 
 PLAYLIST_URL="${PLAYLIST_URL:-}"
+OUTPUT_DIR="zip_archive"
 LIMIT=""
 MAX_HEIGHT="720"
 FORCE=0
@@ -26,6 +28,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --playlist-url)
       PLAYLIST_URL="$2"
+      shift 2
+      ;;
+    --output-dir)
+      OUTPUT_DIR="$2"
       shift 2
       ;;
     --limit)
@@ -63,8 +69,8 @@ if [[ -z "$PLAYLIST_URL" ]]; then
   exit 1
 fi
 
-RAW_DIR="zip_archive/raw_videos"
-META_DIR="zip_archive/metadata"
+RAW_DIR="${OUTPUT_DIR}/raw_videos"
+META_DIR="${OUTPUT_DIR}/metadata"
 ARCHIVE_FILE="${META_DIR}/downloaded_ids.txt"
 mkdir -p "$RAW_DIR" "$META_DIR"
 

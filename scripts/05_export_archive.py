@@ -217,9 +217,11 @@ def infer_missing_puzzle_numbers(entries: list[dict]) -> None:
 
         if prev_num is not None and next_num is not None:
             if prev_num == next_num + 1:
-                entry["puzzle_number"] = prev_num
+                # Adjacent numbers: this entry is likely a bonus/non-daily video.
+                entry["puzzle_number"] = next_num
             else:
-                entry["puzzle_number"] = max(prev_num, next_num)
+                # Gap: interpolate midpoint (playlist is newest-first → descending numbers).
+                entry["puzzle_number"] = (prev_num + next_num) // 2
         elif prev_num is not None:
             entry["puzzle_number"] = prev_num
         elif next_num is not None:
