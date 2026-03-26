@@ -44,7 +44,8 @@ LinkedIn propose deux mini-jeux quotidiens (Queens et Zip) sans interface d'entr
 - [ ] Historique des puzzles résolus
 
 ### Backend
-- [ ] Tests unitaires (0 actuellement — priorité haute)
+- [x] Tests unitaires : 27 fichiers, 36 passing
+- [x] Corriger les 23 tests en échec (fixtures créées dans `data/curated/`) — 59/59 ✅
 - [ ] Solver Zip : nouveaux algorithmes
 - [ ] Support d'autres jeux LinkedIn (Tango, Crossclimb)
 

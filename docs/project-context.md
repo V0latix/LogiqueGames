@@ -42,7 +42,7 @@ Framework éducatif de résolution de puzzles LinkedIn (Queens et Zip). Deux com
 │   ├── datasets/           # exporter, normalize, organize, unique
 │   ├── benchmarks/         # queens.py, zip.py, report_utils.py
 │   └── cli.py              # Point d'entrée CLI `lgs`
-├── tests/                  # pytest (0 tests actuellement)
+├── tests/                  # pytest — 27 fichiers, 36 passing, 23 failing (fixtures manquantes dans data/curated/)
 ├── scripts/                # Pipeline extraction 00→07
 ├── web/
 │   ├── src/
