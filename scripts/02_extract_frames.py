@@ -28,6 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fps", type=float, default=DEFAULT_FPS, help="Frame extraction rate")
     parser.add_argument("--start_offset", type=float, default=0.0, help="Seconds to skip at start")
     parser.add_argument("--end_offset", type=float, default=0.0, help="Seconds to skip at end")
+    parser.add_argument("--max-time", type=float, default=None, help="Only extract the first N seconds of each video")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--force", action="store_true", help="Re-extract even if frames exist")
     parser.add_argument("--verbose", action="store_true")
@@ -70,6 +71,7 @@ def extract_frames_for_video(
     end_offset: float,
     duration: float,
     *,
+    max_time: float | None = None,
     verbose: bool,
 ) -> tuple[bool, str | None]:
     if duration <= 0:
@@ -77,6 +79,8 @@ def extract_frames_for_video(
 
     start = max(0.0, start_offset)
     stop = duration - max(0.0, end_offset)
+    if max_time is not None:
+        stop = min(stop, start + max_time)
     if stop <= start:
         return False, f"invalid offsets ({start_offset=} {end_offset=}, duration={duration:.2f})"
 
@@ -119,6 +123,8 @@ def main() -> int:
         raise SystemExit("--fps must be > 0")
     if args.start_offset < 0 or args.end_offset < 0:
         raise SystemExit("--start_offset and --end_offset must be >= 0")
+    if args.max_time is not None and args.max_time <= 0:
+        raise SystemExit("--max-time must be > 0")
 
     raw_videos_dir = Path(args.raw_videos_dir)
     frames_dir = Path(args.frames_dir)
@@ -188,6 +194,7 @@ def main() -> int:
                 start_offset=args.start_offset,
                 end_offset=args.end_offset,
                 duration=duration,
+                max_time=args.max_time,
                 verbose=args.verbose,
             )
             if not ok:

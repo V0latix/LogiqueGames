@@ -24,6 +24,7 @@ from config import (
     HOUGH_MAX_LINE_GAP,
     HOUGH_MIN_LINE_LENGTH,
     HOUGH_THRESHOLD,
+    SATURATION_PENALTY_WEIGHT,
 )
 from pipeline_utils import dump_json, ensure_dir, format_seconds, load_json, relative_to_cwd, utc_now_iso
 
@@ -128,6 +129,12 @@ def detect_grid_lines(gray: np.ndarray) -> tuple[int, int]:
     return vertical, horizontal
 
 
+def saturation_ratio(image: np.ndarray) -> float:
+    """Return the fraction of pixels with HSV saturation > 80 (coloured path indicator)."""
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    return float((hsv[:, :, 1] > 80).mean())
+
+
 def score_frame(frame_path: Path) -> dict | None:
     image = cv2.imread(str(frame_path), cv2.IMREAD_COLOR)
     if image is None:
@@ -139,6 +146,7 @@ def score_frame(frame_path: Path) -> dict | None:
     entropy = image_entropy(gray)
     block = blockiness(gray)
     vertical_count, horizontal_count = detect_grid_lines(gray)
+    sat_ratio = saturation_ratio(image)
 
     # Grid-likeness core signal: many vertical/horizontal lines with balanced counts.
     line_score = float(vertical_count + horizontal_count)
@@ -148,8 +156,13 @@ def score_frame(frame_path: Path) -> dict | None:
     blur_penalty = max(0.0, (BLUR_THRESHOLD - lap_var) / BLUR_THRESHOLD) * BLUR_PENALTY_WEIGHT
     entropy_penalty = max(0.0, ENTROPY_MIN - entropy) * ENTROPY_PENALTY_WEIGHT
     compression_penalty = block * BLOCKINESS_PENALTY_WEIGHT
+    # Penalize frames where a coloured solution path has been drawn.
+    saturation_penalty = sat_ratio * SATURATION_PENALTY_WEIGHT
 
-    total_score = line_score + balance_bonus - blur_penalty - entropy_penalty - compression_penalty
+    total_score = (
+        line_score + balance_bonus
+        - blur_penalty - entropy_penalty - compression_penalty - saturation_penalty
+    )
 
     return {
         "frame_path": str(frame_path),
@@ -160,10 +173,12 @@ def score_frame(frame_path: Path) -> dict | None:
         "laplacian_var": round(lap_var, 5),
         "entropy": round(entropy, 5),
         "blockiness": round(block, 5),
+        "saturation_ratio": round(sat_ratio, 5),
         "penalties": {
             "blur": round(float(blur_penalty), 5),
             "entropy": round(float(entropy_penalty), 5),
             "compression": round(float(compression_penalty), 5),
+            "saturation": round(float(saturation_penalty), 5),
         },
     }
 

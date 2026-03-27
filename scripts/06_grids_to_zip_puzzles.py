@@ -552,6 +552,29 @@ def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = 
             "error": "no number circles detected",
         }
 
+    # Deduplicate circles that map to the same cell: keep the one whose centre
+    # is closest to the cell centre (corner-rounding artefacts land further away).
+    def _cell_center(row: int, col: int) -> tuple[float, float]:
+        cx = (xs[col] + xs[col + 1]) / 2.0 if col + 1 < len(xs) else xs[col]
+        cy = (ys[row] + ys[row + 1]) / 2.0 if row + 1 < len(ys) else ys[row]
+        return cx, cy
+
+    cell_to_circle: dict[tuple[int, int], Circle] = {}
+    for circle in circles:
+        row = infer_cell_index(circle.y, ys, n)
+        col = infer_cell_index(circle.x, xs, n)
+        cell = (row, col)
+        if cell not in cell_to_circle:
+            cell_to_circle[cell] = circle
+        else:
+            # Keep whichever circle centre is closest to the cell centre.
+            ccx, ccy = _cell_center(row, col)
+            prev = cell_to_circle[cell]
+            if (circle.x - ccx) ** 2 + (circle.y - ccy) ** 2 < (prev.x - ccx) ** 2 + (prev.y - ccy) ** 2:
+                cell_to_circle[cell] = circle
+
+    circles = sorted(cell_to_circle.values(), key=lambda c: (c.y, c.x))
+
     patches: list[np.ndarray] = []
     knn_guesses: list[int | None] = []
     knn_confs: list[float] = []
@@ -565,17 +588,11 @@ def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = 
 
     labels, assign_conf = assign_unique_labels(patches, knn_guesses, knn_confs)
 
-    seen_cells: set[tuple[int, int]] = set()
     numbers: list[dict[str, int]] = []
-    duplicate_cell = False
 
     for circle, label in zip(circles, labels):
         row = infer_cell_index(circle.y, ys, n)
         col = infer_cell_index(circle.x, xs, n)
-        cell = (row, col)
-        if cell in seen_cells:
-            duplicate_cell = True
-        seen_cells.add(cell)
         numbers.append({"k": int(label), "r": int(row), "c": int(col)})
 
     numbers.sort(key=lambda item: item["k"])
@@ -602,9 +619,6 @@ def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = 
 
     status = "ok"
     reasons: list[str] = []
-    if duplicate_cell:
-        status = "needs_review"
-        reasons.append("duplicate checkpoint cell detected")
     if assign_conf < 0.18:
         status = "needs_review"
         reasons.append(f"low number recognition confidence ({assign_conf:.3f})")

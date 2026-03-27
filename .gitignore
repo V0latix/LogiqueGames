@@ -12,35 +12,6 @@ web/.vite/
 __pycache__/
 *.pyc
 
-# Large/generated assets for the Zip extraction pipeline
-zip_archive/raw_videos/*
-!zip_archive/raw_videos/.gitkeep
-zip_archive/frames/*
-!zip_archive/frames/.gitkeep
-zip_archive/candidates/*
-!zip_archive/candidates/.gitkeep
-zip_archive/grids/*
-!zip_archive/grids/.gitkeep
-zip_archive/puzzles_zip/*
-!zip_archive/puzzles_zip/.gitkeep
-zip_archive/metadata/*.json
-zip_archive/metadata/*.html
-zip_archive/metadata/*.zip
-zip_archive/metadata/*.txt
-!zip_archive/metadata/.gitkeep
-
-queens_archive/raw_videos/*
-!queens_archive/raw_videos/.gitkeep
-queens_archive/frames/*
-!queens_archive/frames/.gitkeep
-queens_archive/candidates/*
-!queens_archive/candidates/.gitkeep
-queens_archive/grids/*
-!queens_archive/grids/.gitkeep
-queens_archive/puzzles_queens/*
-!queens_archive/puzzles_queens/.gitkeep
-queens_archive/metadata/*.json
-queens_archive/metadata/*.html
-queens_archive/metadata/*.zip
-queens_archive/metadata/*.txt
-!queens_archive/metadata/.gitkeep
+# Extraction pipeline archives (local only)
+zip_archive/
+queens_archive/

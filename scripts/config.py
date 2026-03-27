@@ -30,6 +30,9 @@ BALANCE_BONUS_WEIGHT = 0.5
 BLUR_PENALTY_WEIGHT = 10.0
 ENTROPY_PENALTY_WEIGHT = 4.0
 BLOCKINESS_PENALTY_WEIGHT = 0.08
+# Penalise frames where a coloured solution path has been drawn.
+# Fraction of pixels with HSV saturation > 80 is multiplied by this weight.
+SATURATION_PENALTY_WEIGHT = 20.0
 
 # Defaults
 DEFAULT_FPS = 0.5
