@@ -66,7 +66,11 @@ def find_candidate_quad(image: np.ndarray) -> tuple[np.ndarray | None, str, floa
 
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
+    h_img, w_img = image.shape[:2]
+    cx_img, cy_img = w_img / 2.0, h_img / 2.0
+
     best_quad: np.ndarray | None = None
+    best_score = -1e9
     best_area = 0.0
 
     for contour in contours:
@@ -77,12 +81,70 @@ def find_candidate_quad(image: np.ndarray) -> tuple[np.ndarray | None, str, floa
         perimeter = cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, APPROX_EPSILON_RATIO * perimeter, True)
 
-        if len(approx) == 4 and area > best_area:
-            best_quad = approx.reshape(4, 2).astype("float32")
+        if len(approx) != 4:
+            continue
+
+        quad = approx.reshape(4, 2).astype("float32")
+        x, y, w, h = cv2.boundingRect(quad.astype(np.int32))
+        if w <= 0 or h <= 0:
+            continue
+
+        # Prefer the centered, near-square game board over UI rectangles (buttons / captions).
+        aspect = w / float(h)
+        aspect_penalty = abs(np.log(max(1e-6, aspect)))
+        quad_center = quad.mean(axis=0)
+        dx = abs(float(quad_center[0]) - cx_img) / max(1.0, float(w_img))
+        dy = abs(float(quad_center[1]) - cy_img) / max(1.0, float(h_img))
+        center_penalty = dx + dy
+        area_ratio = float(area) / float(image_area)
+
+        score = area_ratio - 0.9 * center_penalty - 0.35 * aspect_penalty
+        if score > best_score:
+            best_score = score
+            best_quad = quad
             best_area = float(area)
 
     if best_quad is not None:
         return best_quad, "quad", best_area / image_area
+
+    # Fallback: try to infer the board bounding box from grid-line density (Hough lines).
+    # This helps when the board contour is weak (eg. low-contrast colored boards) but
+    # internal grid lines are still detectable.
+    try:
+        edges2 = cv2.Canny(blur, max(1, int(CANNY_LOW * 0.6)), max(2, int(CANNY_HIGH * 0.6)))
+        lines = cv2.HoughLinesP(
+            edges2,
+            rho=1,
+            theta=np.pi / 180,
+            threshold=60,
+            minLineLength=80,
+            maxLineGap=6,
+        )
+        if lines is not None:
+            all_h: list[float] = []
+            all_v: list[float] = []
+            for x1, y1, x2, y2 in lines[:, 0]:
+                angle = abs(np.degrees(np.arctan2((y2 - y1), (x2 - x1))))
+                angle = min(angle, 180.0 - angle)
+                if angle < 10:
+                    all_h.append((y1 + y2) / 2.0)
+                elif angle > 80:
+                    all_v.append((x1 + x2) / 2.0)
+
+            if len(all_h) >= 6 and len(all_v) >= 6:
+                x0, x1 = np.percentile(np.array(all_v, dtype=np.float32), [5, 95]).tolist()
+                y0, y1 = np.percentile(np.array(all_h, dtype=np.float32), [5, 95]).tolist()
+                pad_x = 0.03 * max(1.0, (x1 - x0))
+                pad_y = 0.03 * max(1.0, (y1 - y0))
+                x0 = max(0.0, x0 - pad_x)
+                y0 = max(0.0, y0 - pad_y)
+                x1 = min(float(image.shape[1] - 1), x1 + pad_x)
+                y1 = min(float(image.shape[0] - 1), y1 + pad_y)
+                quad2 = np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], dtype="float32")
+                area2 = float((x1 - x0) * (y1 - y0))
+                return quad2, "hough_bbox", area2 / float(image_area)
+    except Exception:
+        pass
 
     # Fallback for imperfect captures: keep the largest contour bounding box.
     largest = contours[0]

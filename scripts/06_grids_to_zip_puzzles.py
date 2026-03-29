@@ -25,6 +25,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-dir", default="zip_archive/puzzles_zip")
     parser.add_argument("--manifest", default="zip_archive/metadata/puzzles_zip_manifest.json")
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--only-video", default=None, help="Process only a specific video_basename")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     return parser.parse_args()
@@ -43,7 +44,108 @@ def cluster_positions(values: list[float], eps: float = 8.0) -> list[float]:
     return [float(sum(cluster) / len(cluster)) for cluster in clusters]
 
 
+def _smooth_1d(values: np.ndarray, k: int = 9) -> np.ndarray:
+    if k <= 1:
+        return values
+    k = int(k)
+    if k % 2 == 0:
+        k += 1
+    kernel = np.ones(k, dtype=np.float32) / float(k)
+    return np.convolve(values.astype(np.float32), kernel, mode="same")
+
+
+def _runs_to_centers(indices: np.ndarray, max_gap: int = 2) -> list[float]:
+    if indices.size == 0:
+        return []
+    runs: list[list[int]] = []
+    current = [int(indices[0])]
+    for idx in indices[1:]:
+        idx = int(idx)
+        if idx - current[-1] <= max_gap:
+            current.append(idx)
+        else:
+            runs.append(current)
+            current = [idx]
+    runs.append(current)
+    return [float(sum(run) / len(run)) for run in runs]
+
+
+def _detect_grid_lines_projection(gray: np.ndarray) -> tuple[list[float], list[float]]:
+    # Grid lines (and walls) are darker than the board background.
+    # Use an adaptive threshold so we don't include tinted cell backgrounds
+    # (eg. blue boards), which would flatten the projection signal.
+    p15 = float(np.percentile(gray, 15))
+    p50 = float(np.percentile(gray, 50))
+    thr = min(p15 + 5.0, p50 - 5.0)
+    thr = float(max(40.0, min(245.0, thr)))
+    mask = (gray < thr).astype(np.float32)
+    v = mask.mean(axis=0)
+    h = mask.mean(axis=1)
+
+    v = _smooth_1d(v, k=11)
+    h = _smooth_1d(h, k=11)
+
+    def _threshold(arr: np.ndarray) -> float:
+        base = float(np.percentile(arr, 50))
+        top = float(np.percentile(arr, 95))
+        return base + 0.35 * max(0.0, top - base)
+
+    v_idx = np.where(v > _threshold(v))[0]
+    h_idx = np.where(h > _threshold(h))[0]
+
+    xs = cluster_positions(_runs_to_centers(v_idx), eps=7.0)
+    ys = cluster_positions(_runs_to_centers(h_idx), eps=7.0)
+
+    h_img, w_img = gray.shape[:2]
+    xs = regularize_line_spacing(xs, axis_limit=w_img)
+    ys = regularize_line_spacing(ys, axis_limit=h_img)
+    return xs, ys
+
+
 def detect_grid_lines(gray: np.ndarray) -> tuple[list[float], list[float]]:
+    def _best_uniform_window(lines: list[float], m: int, desired_span: float | None = None) -> list[float]:
+        if len(lines) <= m:
+            return lines
+        lines = sorted(lines)
+        best_window = lines[:m]
+        best_score = float("inf")
+        for start in range(0, len(lines) - m + 1):
+            window = lines[start : start + m]
+            gaps = [b - a for a, b in zip(window[:-1], window[1:])]
+            if not gaps:
+                continue
+            # Prefer windows with the most regular spacing (grid lines).
+            std = float(np.std(np.array(gaps, dtype=np.float32)))
+            span = float(window[-1] - window[0])
+            # Regular spacing is important, but pick the window that also spans
+            # the largest region (to avoid UI separators).
+            score = std / max(1.0, span)
+            if desired_span is not None and desired_span > 1.0:
+                score += 0.35 * (abs(span - desired_span) / desired_span)
+            if score < best_score:
+                best_score = score
+                best_window = window
+        return best_window
+
+    def _trim_to_square(xs: list[float], ys: list[float]) -> tuple[list[float], list[float]]:
+        m = min(len(xs), len(ys))
+        if m < 3:
+            return xs, ys
+
+        xs_sorted = sorted(xs)
+        ys_sorted = sorted(ys)
+
+        if len(xs_sorted) < len(ys_sorted) and len(xs_sorted) >= 2:
+            desired = float(xs_sorted[m - 1] - xs_sorted[0])
+            return xs_sorted[:m], _best_uniform_window(ys_sorted, m, desired_span=desired)
+
+        if len(ys_sorted) < len(xs_sorted) and len(ys_sorted) >= 2:
+            desired = float(ys_sorted[m - 1] - ys_sorted[0])
+            return _best_uniform_window(xs_sorted, m, desired_span=desired), ys_sorted[:m]
+
+        # Same count: still trim to the best window for uniformity.
+        return _best_uniform_window(xs_sorted, m), _best_uniform_window(ys_sorted, m)
+
     blur = cv2.GaussianBlur(gray, (3, 3), 0)
     edges = cv2.Canny(blur, 30, 100)
 
@@ -78,6 +180,15 @@ def detect_grid_lines(gray: np.ndarray) -> tuple[list[float], list[float]]:
     xs = regularize_line_spacing(xs, axis_limit=w)
     ys = regularize_line_spacing(ys, axis_limit=h)
 
+    # If Hough is weak (few lines), fall back to a projection-based method which
+    # tends to work better with thick walls and UI artefacts.
+    xs2, ys2 = _detect_grid_lines_projection(gray)
+    if min(len(xs2), len(ys2)) > min(len(xs), len(ys)):
+        xs, ys = xs2, ys2
+
+    # Some crops include UI elements that generate extra "lines" in one axis.
+    # The Zip grid is square, so trim the denser axis down to the best uniform window.
+    xs, ys = _trim_to_square(xs, ys)
     return xs, ys
 
 
@@ -230,11 +341,14 @@ def detect_walls(
     if not thicknesses:
         return []
 
-    median_t = float(np.median(list(thicknesses.values())))
-    if median_t <= 0:
+    values = np.array(list(thicknesses.values()), dtype=np.float32)
+    # Use a low percentile as the baseline "thin grid line" thickness.
+    # Median can be dominated by walls when a puzzle has lots of thick edges.
+    baseline_t = float(np.percentile(values, 35))
+    if baseline_t <= 0:
         return []
 
-    wall_thresh = median_t * wall_ratio
+    wall_thresh = baseline_t * wall_ratio
     walls: list[dict] = []
 
     for (axis, r, c), t in thicknesses.items():
@@ -249,8 +363,12 @@ def detect_walls(
 
 
 def detect_circles(gray: np.ndarray) -> list[Circle]:
-    # Black circular checkpoints in the puzzle are very dark compared to the board.
-    dark = (gray < 55).astype(np.uint8) * 255
+    # Black circular checkpoints are among the darkest objects, but screenshots vary
+    # (blue-tinted boards, compression). Use an adaptive threshold instead of a
+    # fixed cutoff so we still pick up slightly lighter "black" circles.
+    p3 = float(np.percentile(gray, 3))
+    thresh = int(min(95.0, max(55.0, p3 + 35.0)))
+    dark = (gray < thresh).astype(np.uint8) * 255
     contours, _ = cv2.findContours(dark, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     circles: list[Circle] = []
@@ -433,10 +551,70 @@ def assign_unique_labels(
     knn_guesses: list[int | None],
     knn_confidences: list[float],
 ) -> tuple[list[int], float]:
+    def _hungarian_min_cost(cost: list[list[float]]) -> list[int]:
+        """Return column assignment for each row (0-indexed) minimizing total cost.
+
+        Implementation: O(n^3) Hungarian algorithm for a square matrix.
+        """
+        n = len(cost)
+        if n == 0:
+            return []
+        if any(len(row) != n for row in cost):
+            raise ValueError("hungarian expects a square cost matrix")
+
+        u = [0.0] * (n + 1)
+        v = [0.0] * (n + 1)
+        p = [0] * (n + 1)  # matched row for column j
+        way = [0] * (n + 1)
+
+        for i in range(1, n + 1):
+            p[0] = i
+            j0 = 0
+            minv = [float("inf")] * (n + 1)
+            used = [False] * (n + 1)
+
+            while True:
+                used[j0] = True
+                i0 = p[j0]
+                delta = float("inf")
+                j1 = 0
+
+                for j in range(1, n + 1):
+                    if used[j]:
+                        continue
+                    cur = cost[i0 - 1][j - 1] - u[i0] - v[j]
+                    if cur < minv[j]:
+                        minv[j] = cur
+                        way[j] = j0
+                    if minv[j] < delta:
+                        delta = minv[j]
+                        j1 = j
+
+                for j in range(n + 1):
+                    if used[j]:
+                        u[p[j]] += delta
+                        v[j] -= delta
+                    else:
+                        minv[j] -= delta
+
+                j0 = j1
+                if p[j0] == 0:
+                    break
+
+            while True:
+                j1 = way[j0]
+                p[j0] = p[j1]
+                j0 = j1
+                if j0 == 0:
+                    break
+
+        assignment = [0] * n  # row -> col
+        for j in range(1, n + 1):
+            assignment[p[j] - 1] = j - 1
+        return assignment
+
     k = len(text_patches)
     available = set(range(1, k + 1))
-    assigned: list[int | None] = [None] * k
-
     cache: dict[int, list[np.ndarray]] = {}
     score_table: list[list[float]] = []
 
@@ -451,26 +629,28 @@ def assign_unique_labels(
             row.append(score)
         score_table.append(row)
 
-    picked_scores: list[float] = []
+    # Global best assignment (greedy can fail when two patches strongly prefer the same label).
+    # Hungarian solves the full bipartite matching.
+    if k == 0:
+        return [], 0.0
 
-    while available:
-        best: tuple[float, int, int] | None = None
-        for i in range(k):
-            if assigned[i] is not None:
-                continue
-            for label in sorted(available):
-                score = score_table[i][label - 1]
-                if best is None or score > best[0]:
-                    best = (score, i, label)
-        assert best is not None
-        score, row_idx, label = best
-        assigned[row_idx] = label
-        picked_scores.append(score)
-        available.remove(label)
+    # Convert to a min-cost problem by negating scores.
+    cost = [[-score for score in row] for row in score_table]
+    row_to_col = _hungarian_min_cost(cost)
 
-    final = [int(value) for value in assigned if value is not None]
+    labels = [col + 1 for col in row_to_col]
+    picked_scores = [score_table[i][row_to_col[i]] for i in range(k)]
     confidence = float(sum(picked_scores) / len(picked_scores)) if picked_scores else 0.0
-    return final, confidence
+
+    # Keep the original API: list of labels in patch order, plus a confidence proxy.
+    # Ensure it's a permutation of 1..k.
+    if set(labels) != available:
+        # This should never happen for a correct Hungarian assignment,
+        # but keep a safe fallback to avoid crashing the pipeline.
+        labels = list(range(1, k + 1))
+        confidence = 0.0
+
+    return labels, confidence
 
 
 def infer_cell_index(value: float, lines: list[float], n: int) -> int:
@@ -540,9 +720,52 @@ def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = 
             "error": f"unable to infer grid size ({len(xs)=}, {len(ys)=})",
         }
 
-    walls = detect_walls(gray, xs, ys, n)
+    # Adaptive threshold so thin grid lines register as "dark" on light themes.
+    adaptive_dark = int(float(np.percentile(gray, 35)))
+    adaptive_dark = max(70, min(170, adaptive_dark))
+    walls = detect_walls(gray, xs, ys, n, dark_thresh=adaptive_dark)
 
     circles = detect_circles(gray)
+    # Ignore circles outside the grid bounding box (eg. "How to play" UI icons).
+    if circles and xs and ys:
+        cell_w = max(1.0, float(xs[-1] - xs[0]) / max(1, n))
+        cell_h = max(1.0, float(ys[-1] - ys[0]) / max(1, n))
+        x0f = float(xs[0]) - 0.35 * cell_w
+        x1f = float(xs[-1]) + 0.35 * cell_w
+        y0f = float(ys[0]) - 0.35 * cell_h
+        y1f = float(ys[-1]) + 0.35 * cell_h
+        circles = [c for c in circles if x0f <= c.x <= x1f and y0f <= c.y <= y1f]
+
+    # Fallback: HoughCircles within the grid ROI when contour-based detection fails.
+    if (not circles or len(circles) < 2) and xs and ys:
+        cell_w = max(1.0, float(xs[-1] - xs[0]) / max(1, n))
+        cell_h = max(1.0, float(ys[-1] - ys[0]) / max(1, n))
+        x0 = max(0, int(round(float(xs[0]) - 0.35 * cell_w)))
+        x1 = min(gray.shape[1], int(round(float(xs[-1]) + 0.35 * cell_w)))
+        y0 = max(0, int(round(float(ys[0]) - 0.35 * cell_h)))
+        y1 = min(gray.shape[0], int(round(float(ys[-1]) + 0.35 * cell_h)))
+        roi = gray[y0:y1, x0:x1]
+        if roi.size:
+            roi_blur = cv2.medianBlur(roi, 5)
+            min_dist = max(10.0, 0.65 * min(cell_w, cell_h))
+            min_r = int(max(8.0, 0.18 * min(cell_w, cell_h)))
+            max_r = int(max(min_r + 2.0, 0.48 * min(cell_w, cell_h)))
+            found = cv2.HoughCircles(
+                roi_blur,
+                cv2.HOUGH_GRADIENT,
+                dp=1.2,
+                minDist=min_dist,
+                param1=120,
+                param2=22,
+                minRadius=min_r,
+                maxRadius=max_r,
+            )
+            if found is not None:
+                for x, y, r in found[0]:
+                    circles.append(Circle(x=float(x + x0), y=float(y + y0), r=float(r)))
+                # Filter again to ROI bounds.
+                circles = [c for c in circles if x0 <= c.x <= x1 and y0 <= c.y <= y1]
+                circles.sort(key=lambda c: (c.y, c.x))
     if not circles:
         return {
             "video_basename": entry.get("video_basename"),
@@ -651,6 +874,8 @@ def main() -> int:
 
     index_payload = load_json(index_path, default={})
     entries = list(index_payload.get("entries", []))
+    if args.only_video:
+        entries = [e for e in entries if isinstance(e, dict) and e.get("video_basename") == args.only_video]
     if args.limit is not None:
         entries = entries[: args.limit]
 

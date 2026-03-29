@@ -253,7 +253,9 @@ def extract_puzzle_number_from_title(title: str | None) -> int | None:
 
     patterns = [
         r"puzzle\s*#\s*(\d+)",
+        r"puzzle\s+(\d+)",
         r"zip\s*#\s*(\d+)",
+        r"zip\s+(\d+)",
         r"#\s*(\d+)",
     ]
     lower = text.lower()
