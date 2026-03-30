@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: '../docs',
-    emptyOutDir: true,
+    // Keep repo docs (markdown, prompts, etc.) alongside the static site output.
+    // Otherwise Vite wipes the whole ../docs directory before each build.
+    emptyOutDir: false,
   },
 });
