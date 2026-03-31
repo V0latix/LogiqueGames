@@ -15,10 +15,13 @@ from __future__ import annotations
 
 import argparse
 from collections import deque
+from dataclasses import dataclass
 from pathlib import Path
 
 import cv2
 import numpy as np
+from config import TARGET_WIDTH
+from extraction_common import candidate_frame_paths, normalize_grid_from_frame, resolve_path
 from pipeline_utils import dump_json, ensure_dir, load_json, relative_to_cwd, utc_now_iso
 
 
@@ -28,9 +31,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-dir", default="zip_archive/puzzles_queens")
     parser.add_argument("--manifest", default="zip_archive/metadata/puzzles_queens_manifest.json")
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--candidate-frames-max", type=int, default=20)
+    parser.add_argument("--candidate-consensus", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--target-width", type=int, default=TARGET_WIDTH)
+    parser.add_argument("--min-quad-area-ratio", type=float, default=0.08)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     return parser.parse_args()
+
+
+@dataclass
+class QueensHypothesis:
+    payload: dict
+    n: int
+    regions: list[list[int]]
+    compactness: float
+    bad_regions: list[int]
+    score: float
+    frame_path: Path
+    normalization_method: str
 
 
 # ─── Grid line detection (shared logic with 06_grids_to_zip_puzzles) ──────────
@@ -209,56 +228,41 @@ def puzzle_name(entry: dict) -> str | None:
     return None
 
 
-# ─── Per-entry conversion ─────────────────────────────────────────────────────
+def pick_queens_consensus(hypotheses: list[QueensHypothesis]) -> tuple[QueensHypothesis, dict]:
+    if len(hypotheses) == 1:
+        return hypotheses[0], {"mode": "single", "candidates": 1}
 
-def convert_one(entry: dict, out_dir: Path, force: bool = False) -> dict:
-    grid_path_value = entry.get("paths", {}).get("grid_image")
-    if not grid_path_value:
-        return {
-            "video_basename": entry.get("video_basename"),
-            "status": "needs_review",
-            "error": "missing grid path",
-        }
+    n_votes: dict[int, float] = {}
+    by_n: dict[int, list[QueensHypothesis]] = {}
+    for hyp in hypotheses:
+        weight = max(0.01, 2.0 - (0.2 * len(hyp.bad_regions)) - (hyp.compactness / max(1.0, (hyp.n * hyp.n * 1800.0))))
+        n_votes[hyp.n] = n_votes.get(hyp.n, 0.0) + weight
+        by_n.setdefault(hyp.n, []).append(hyp)
 
-    grid_path = Path(grid_path_value)
-    if not grid_path.is_absolute():
-        grid_path = Path.cwd() / grid_path
+    best_n = max(n_votes, key=lambda n: (n_votes[n], len(by_n[n]), max(h.score for h in by_n[n])))
+    best_hyp = max(by_n[best_n], key=lambda h: h.score)
+    return best_hyp, {
+        "mode": "n_consensus",
+        "candidates": len(hypotheses),
+        "winning_n": best_n,
+        "winning_votes": round(n_votes[best_n], 5),
+        "n_agreement": len(by_n[best_n]),
+        "distinct_n": len(n_votes),
+    }
 
-    file_name = output_filename(entry, fallback_idx=int(entry.get("playlist_index") or 0))
-    out_path = out_dir / file_name
 
-    if out_path.exists() and not force:
-        return {
-            "video_basename": entry.get("video_basename"),
-            "playlist_index": entry.get("playlist_index"),
-            "grid_image": relative_to_cwd(grid_path),
-            "json_path": relative_to_cwd(out_path),
-            "status": "ok",
-            "skipped": True,
-        }
-
-    image = cv2.imread(str(grid_path), cv2.IMREAD_COLOR)
-    if image is None:
-        return {
-            "video_basename": entry.get("video_basename"),
-            "playlist_index": entry.get("playlist_index"),
-            "grid_image": relative_to_cwd(grid_path),
-            "status": "needs_review",
-            "error": "cannot read grid image",
-        }
-
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    xs, ys = detect_grid_lines(gray)
+def _extract_queens_hypothesis(
+    *,
+    entry: dict,
+    image: np.ndarray,
+    xs: list[float],
+    ys: list[float],
+    frame_path: Path,
+    normalization_method: str,
+) -> QueensHypothesis | None:
     n = min(len(xs), len(ys)) - 1
-
     if n < 2:
-        return {
-            "video_basename": entry.get("video_basename"),
-            "playlist_index": entry.get("playlist_index"),
-            "grid_image": relative_to_cwd(grid_path),
-            "status": "needs_review",
-            "error": f"unable to infer grid size ({len(xs)=}, {len(ys)=})",
-        }
+        return None
 
     colors = sample_cell_colors(image, xs, ys, n)
     regions, compactness = cluster_to_regions(colors, n)
@@ -267,7 +271,7 @@ def convert_one(entry: dict, out_dir: Path, force: bool = False) -> dict:
 
     payload = {
         "game": "queens",
-        "n": n,
+        "n": int(n),
         "regions": regions,
         "givens": {"queens": [], "blocked": []},
         "meta": {
@@ -277,20 +281,121 @@ def convert_one(entry: dict, out_dir: Path, force: bool = False) -> dict:
             "puzzle_date": entry.get("puzzle_date"),
             "source_url": entry.get("source_url"),
             "frame_timestamp": entry.get("frame_timestamp"),
-            "grid_image": relative_to_cwd(grid_path),
+            "grid_image": relative_to_cwd(frame_path),
             "name": name,
-            "conversion": "png_to_queens_v1",
+            "conversion": "png_to_queens_consensus_v2",
+            "normalization_method": normalization_method,
         },
     }
 
+    score = (
+        1.0
+        - (0.2 * len(bad_regions))
+        - (compactness / max(1.0, (n * n * 1200.0)))
+    )
+    return QueensHypothesis(
+        payload=payload,
+        n=int(n),
+        regions=regions,
+        compactness=float(compactness),
+        bad_regions=bad_regions,
+        score=float(score),
+        frame_path=frame_path,
+        normalization_method=normalization_method,
+    )
+
+
+# ─── Per-entry conversion ─────────────────────────────────────────────────────
+
+def convert_one(entry: dict, out_dir: Path, args: argparse.Namespace) -> dict:
+    file_name = output_filename(entry, fallback_idx=int(entry.get("playlist_index") or 0))
+    out_path = out_dir / file_name
+
+    grid_path = resolve_path((entry.get("paths") or {}).get("grid_image") if isinstance(entry.get("paths"), dict) else None)
+    if out_path.exists() and not args.force:
+        return {
+            "video_basename": entry.get("video_basename"),
+            "playlist_index": entry.get("playlist_index"),
+            "grid_image": relative_to_cwd(grid_path) if grid_path else None,
+            "json_path": relative_to_cwd(out_path),
+            "status": "ok",
+            "skipped": True,
+        }
+
+    frame_candidates = candidate_frame_paths(entry, max_frames=int(args.candidate_frames_max))
+    if not args.candidate_consensus and frame_candidates:
+        frame_candidates = frame_candidates[:1]
+
+    hypotheses: list[QueensHypothesis] = []
+    for frame_path in frame_candidates:
+        normalized = normalize_grid_from_frame(
+            frame_path,
+            line_detector=detect_grid_lines,
+            target_width=int(args.target_width),
+            min_area_ratio=float(args.min_quad_area_ratio),
+        )
+        if not normalized:
+            continue
+        hyp = _extract_queens_hypothesis(
+            entry=entry,
+            image=normalized["image"],
+            xs=normalized["xs"],
+            ys=normalized["ys"],
+            frame_path=frame_path,
+            normalization_method=str(normalized["method"]),
+        )
+        if hyp is not None:
+            hypotheses.append(hyp)
+
+    # Fallback to legacy pre-cropped grid when frame normalization fails.
+    if not hypotheses and grid_path and grid_path.exists():
+        image = cv2.imread(str(grid_path), cv2.IMREAD_COLOR)
+        if image is not None:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            xs, ys = detect_grid_lines(gray)
+            hyp = _extract_queens_hypothesis(
+                entry=entry,
+                image=image,
+                xs=xs,
+                ys=ys,
+                frame_path=grid_path,
+                normalization_method="precomputed_grid",
+            )
+            if hyp is not None:
+                hypotheses.append(hyp)
+
+    if not hypotheses:
+        return {
+            "video_basename": entry.get("video_basename"),
+            "playlist_index": entry.get("playlist_index"),
+            "grid_image": relative_to_cwd(grid_path) if grid_path else None,
+            "status": "needs_review",
+            "error": "no valid hypotheses from candidate frames",
+        }
+
+    if args.candidate_consensus:
+        winner, consensus_info = pick_queens_consensus(hypotheses)
+    else:
+        winner = max(hypotheses, key=lambda h: h.score)
+        consensus_info = {"mode": "best_score_only", "candidates": len(hypotheses)}
+
+    winner.payload.setdefault("meta", {})["consensus"] = consensus_info
+
     ensure_dir(out_path.parent)
-    dump_json(out_path, payload)
+    dump_json(out_path, winner.payload)
 
     status = "ok"
     reasons: list[str] = []
-    if bad_regions:
+    if winner.bad_regions:
         status = "needs_review"
-        reasons.append(f"non-contiguous regions: {bad_regions}")
+        reasons.append(f"non-contiguous regions: {winner.bad_regions}")
+
+    reasons.append(f"consensus_mode={consensus_info.get('mode')}")
+    reasons.append(f"hypotheses={consensus_info.get('candidates')}")
+    if "n_agreement" in consensus_info:
+        reasons.append(f"n_agreement={consensus_info['n_agreement']}")
+    if "distinct_n" in consensus_info:
+        reasons.append(f"distinct_n={consensus_info['distinct_n']}")
 
     return {
         "video_basename": entry.get("video_basename"),
@@ -298,12 +403,12 @@ def convert_one(entry: dict, out_dir: Path, force: bool = False) -> dict:
         "video_id": entry.get("video_id"),
         "puzzle_number": entry.get("puzzle_number"),
         "puzzle_date": entry.get("puzzle_date"),
-        "grid_image": relative_to_cwd(grid_path),
+        "grid_image": relative_to_cwd(winner.frame_path),
         "json_path": relative_to_cwd(out_path),
-        "n": n,
-        "name": name,
-        "color_compactness": round(compactness, 2),
-        "non_contiguous_regions": bad_regions,
+        "n": int(winner.n),
+        "name": winner.payload.get("meta", {}).get("name"),
+        "color_compactness": round(float(winner.compactness), 2),
+        "non_contiguous_regions": winner.bad_regions,
         "status": status,
         "notes": reasons,
     }
@@ -332,7 +437,7 @@ def main() -> int:
 
     results: list[dict] = []
     for idx, entry in enumerate(entries, start=1):
-        result = convert_one(entry, out_dir=out_dir, force=args.force)
+        result = convert_one(entry, out_dir=out_dir, args=args)
         results.append(result)
         if args.verbose:
             status = result.get("status")

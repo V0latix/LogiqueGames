@@ -6,10 +6,20 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
+import sys
 
 import cv2
 import numpy as np
+from config import TARGET_WIDTH
+from extraction_common import candidate_frame_paths, normalize_grid_from_frame, resolve_path
 from pipeline_utils import dump_json, ensure_dir, load_json, relative_to_cwd, utc_now_iso
+
+SRC_DIR = Path(__file__).resolve().parents[1] / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from linkedin_game_solver.games.zip.parser import parse_puzzle_dict
+from linkedin_game_solver.games.zip.solver_forced import solve_forced
 
 
 @dataclass
@@ -19,6 +29,21 @@ class Circle:
     r: float
 
 
+@dataclass
+class ZipHypothesis:
+    payload: dict
+    n: int
+    numbers: list[dict[str, int]]
+    walls: list[dict[str, int]]
+    recognition_confidence: float
+    parse_ok: bool
+    solver_ok: bool
+    score: float
+    frame_path: Path
+    normalization_method: str
+    quad_area_ratio: float
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Convert grid PNGs to Zip JSON puzzles")
     parser.add_argument("--index", default="zip_archive/metadata/index.json")
@@ -26,6 +51,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--manifest", default="zip_archive/metadata/puzzles_zip_manifest.json")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--only-video", default=None, help="Process only a specific video_basename")
+    parser.add_argument("--candidate-frames-max", type=int, default=20)
+    parser.add_argument("--candidate-consensus", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--target-width", type=int, default=TARGET_WIDTH)
+    parser.add_argument("--min-quad-area-ratio", type=float, default=0.08)
+    parser.add_argument("--solver-time-limit-s", type=float, default=0.2)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     return parser.parse_args()
@@ -660,6 +690,76 @@ def infer_cell_index(value: float, lines: list[float], n: int) -> int:
     return max(0, min(n - 1, idx))
 
 
+def _normalize_wall_tuple(wall: dict[str, int]) -> tuple[tuple[int, int], tuple[int, int]]:
+    a = (int(wall["r1"]), int(wall["c1"]))
+    b = (int(wall["r2"]), int(wall["c2"]))
+    return tuple(sorted([a, b]))  # type: ignore[return-value]
+
+
+def _numbers_signature(numbers: list[dict[str, int]]) -> tuple[tuple[int, int, int], ...]:
+    return tuple(sorted((int(n["k"]), int(n["r"]), int(n["c"])) for n in numbers))
+
+
+def _walls_signature(walls: list[dict[str, int]]) -> tuple[tuple[tuple[int, int], tuple[int, int]], ...]:
+    return tuple(sorted(_normalize_wall_tuple(wall) for wall in walls))
+
+
+def _hypothesis_signature(hyp: ZipHypothesis) -> tuple:
+    return (int(hyp.n), _numbers_signature(hyp.numbers), _walls_signature(hyp.walls))
+
+
+def evaluate_zip_constraints(payload: dict, solver_time_limit_s: float = 0.2) -> tuple[bool, bool, list[str]]:
+    notes: list[str] = []
+    try:
+        puzzle = parse_puzzle_dict(payload)
+        parse_ok = True
+    except Exception as exc:
+        parse_ok = False
+        notes.append(f"parser_failed:{exc}")
+        return parse_ok, False, notes
+
+    try:
+        solved = solve_forced(puzzle, time_limit_s=max(0.01, float(solver_time_limit_s)))
+        solver_ok = bool(solved.solved)
+        if not solver_ok and solved.error:
+            notes.append(f"solver_failed:{solved.error}")
+    except Exception as exc:
+        solver_ok = False
+        notes.append(f"solver_exception:{exc}")
+
+    return parse_ok, solver_ok, notes
+
+
+def pick_consensus_hypothesis(hypotheses: list[ZipHypothesis]) -> tuple[ZipHypothesis, dict]:
+    if len(hypotheses) == 1:
+        return hypotheses[0], {"mode": "single", "candidates": 1}
+
+    votes: dict[tuple, float] = {}
+    by_sig: dict[tuple, list[ZipHypothesis]] = {}
+    for hyp in hypotheses:
+        sig = _hypothesis_signature(hyp)
+        weight = max(0.01, float(hyp.score) + 1.0)
+        votes[sig] = votes.get(sig, 0.0) + weight
+        by_sig.setdefault(sig, []).append(hyp)
+
+    best_sig = max(
+        votes,
+        key=lambda sig: (
+            votes[sig],
+            max(h.score for h in by_sig[sig]),
+            len(by_sig[sig]),
+        ),
+    )
+    best_hyp = max(by_sig[best_sig], key=lambda h: h.score)
+    return best_hyp, {
+        "mode": "consensus",
+        "candidates": len(hypotheses),
+        "winning_votes": round(votes[best_sig], 5),
+        "signature_agreement": len(by_sig[best_sig]),
+        "unique_signatures": len(votes),
+    }
+
+
 def output_filename(entry: dict, fallback_idx: int) -> str:
     puzzle_number = entry.get("puzzle_number")
     if isinstance(puzzle_number, int):
@@ -671,62 +771,27 @@ def output_filename(entry: dict, fallback_idx: int) -> str:
     return f"{num_part}_{date_part}__{basename}.json"
 
 
-def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = False) -> dict:
-    grid_path_value = entry.get("paths", {}).get("grid_image")
-    if not grid_path_value:
-        return {
-            "video_basename": entry.get("video_basename"),
-            "status": "needs_review",
-            "error": "missing grid path",
-        }
-
-    grid_path = Path(grid_path_value)
-    if not grid_path.is_absolute():
-        grid_path = Path.cwd() / grid_path
-
-    file_name = output_filename(entry, fallback_idx=int(entry.get("playlist_index") or 0))
-    out_path = out_dir / file_name
-
-    if out_path.exists() and not force:
-        return {
-            "video_basename": entry.get("video_basename"),
-            "playlist_index": entry.get("playlist_index"),
-            "grid_image": relative_to_cwd(grid_path),
-            "json_path": relative_to_cwd(out_path),
-            "status": "ok",
-            "skipped": True,
-        }
-
-    image = cv2.imread(str(grid_path), cv2.IMREAD_COLOR)
-    if image is None:
-        return {
-            "video_basename": entry.get("video_basename"),
-            "playlist_index": entry.get("playlist_index"),
-            "grid_image": relative_to_cwd(grid_path),
-            "status": "needs_review",
-            "error": "cannot read grid image",
-        }
-
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    xs, ys = detect_grid_lines(gray)
-
+def _extract_zip_hypothesis(
+    *,
+    entry: dict,
+    gray: np.ndarray,
+    xs: list[float],
+    ys: list[float],
+    knn: cv2.ml_KNearest,
+    frame_path: Path,
+    normalization_method: str,
+    quad_area_ratio: float,
+    solver_time_limit_s: float,
+) -> ZipHypothesis | None:
     n = min(len(xs), len(ys)) - 1
     if n < 2:
-        return {
-            "video_basename": entry.get("video_basename"),
-            "playlist_index": entry.get("playlist_index"),
-            "grid_image": relative_to_cwd(grid_path),
-            "status": "needs_review",
-            "error": f"unable to infer grid size ({len(xs)=}, {len(ys)=})",
-        }
+        return None
 
-    # Adaptive threshold so thin grid lines register as "dark" on light themes.
     adaptive_dark = int(float(np.percentile(gray, 35)))
     adaptive_dark = max(70, min(170, adaptive_dark))
     walls = detect_walls(gray, xs, ys, n, dark_thresh=adaptive_dark)
 
     circles = detect_circles(gray)
-    # Ignore circles outside the grid bounding box (eg. "How to play" UI icons).
     if circles and xs and ys:
         cell_w = max(1.0, float(xs[-1] - xs[0]) / max(1, n))
         cell_h = max(1.0, float(ys[-1] - ys[0]) / max(1, n))
@@ -736,7 +801,6 @@ def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = 
         y1f = float(ys[-1]) + 0.35 * cell_h
         circles = [c for c in circles if x0f <= c.x <= x1f and y0f <= c.y <= y1f]
 
-    # Fallback: HoughCircles within the grid ROI when contour-based detection fails.
     if (not circles or len(circles) < 2) and xs and ys:
         cell_w = max(1.0, float(xs[-1] - xs[0]) / max(1, n))
         cell_h = max(1.0, float(ys[-1] - ys[0]) / max(1, n))
@@ -763,20 +827,12 @@ def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = 
             if found is not None:
                 for x, y, r in found[0]:
                     circles.append(Circle(x=float(x + x0), y=float(y + y0), r=float(r)))
-                # Filter again to ROI bounds.
                 circles = [c for c in circles if x0 <= c.x <= x1 and y0 <= c.y <= y1]
                 circles.sort(key=lambda c: (c.y, c.x))
-    if not circles:
-        return {
-            "video_basename": entry.get("video_basename"),
-            "playlist_index": entry.get("playlist_index"),
-            "grid_image": relative_to_cwd(grid_path),
-            "status": "needs_review",
-            "error": "no number circles detected",
-        }
 
-    # Deduplicate circles that map to the same cell: keep the one whose centre
-    # is closest to the cell centre (corner-rounding artefacts land further away).
+    if not circles:
+        return None
+
     def _cell_center(row: int, col: int) -> tuple[float, float]:
         cx = (xs[col] + xs[col + 1]) / 2.0 if col + 1 < len(xs) else xs[col]
         cy = (ys[row] + ys[row + 1]) / 2.0 if row + 1 < len(ys) else ys[row]
@@ -790,18 +846,15 @@ def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = 
         if cell not in cell_to_circle:
             cell_to_circle[cell] = circle
         else:
-            # Keep whichever circle centre is closest to the cell centre.
             ccx, ccy = _cell_center(row, col)
             prev = cell_to_circle[cell]
             if (circle.x - ccx) ** 2 + (circle.y - ccy) ** 2 < (prev.x - ccx) ** 2 + (prev.y - ccy) ** 2:
                 cell_to_circle[cell] = circle
-
     circles = sorted(cell_to_circle.values(), key=lambda c: (c.y, c.x))
 
     patches: list[np.ndarray] = []
     knn_guesses: list[int | None] = []
     knn_confs: list[float] = []
-
     for circle in circles:
         patch = text_patch_from_circle(gray, circle)
         guess, conf = predict_digits_with_knn(patch, knn)
@@ -810,14 +863,11 @@ def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = 
         knn_confs.append(conf)
 
     labels, assign_conf = assign_unique_labels(patches, knn_guesses, knn_confs)
-
     numbers: list[dict[str, int]] = []
-
     for circle, label in zip(circles, labels):
         row = infer_cell_index(circle.y, ys, n)
         col = infer_cell_index(circle.x, xs, n)
         numbers.append({"k": int(label), "r": int(row), "c": int(col)})
-
     numbers.sort(key=lambda item: item["k"])
 
     payload = {
@@ -832,19 +882,137 @@ def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = 
             "puzzle_date": entry.get("puzzle_date"),
             "source_url": entry.get("source_url"),
             "frame_timestamp": entry.get("frame_timestamp"),
-            "grid_image": relative_to_cwd(grid_path),
-            "conversion": "png_to_zip_v1",
+            "grid_image": relative_to_cwd(frame_path),
+            "conversion": "png_to_zip_consensus_v2",
+            "normalization_method": normalization_method,
         },
     }
 
+    parse_ok, solver_ok, _constraint_notes = evaluate_zip_constraints(payload, solver_time_limit_s=solver_time_limit_s)
+    score = (
+        float(assign_conf)
+        + (0.85 if parse_ok else -0.75)
+        + (0.65 if solver_ok else -0.15)
+        + min(0.35, float(quad_area_ratio))
+    )
+
+    return ZipHypothesis(
+        payload=payload,
+        n=int(n),
+        numbers=numbers,
+        walls=walls,
+        recognition_confidence=float(assign_conf),
+        parse_ok=parse_ok,
+        solver_ok=solver_ok,
+        score=float(score),
+        frame_path=frame_path,
+        normalization_method=normalization_method,
+        quad_area_ratio=float(quad_area_ratio),
+    )
+
+
+def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, args: argparse.Namespace) -> dict:
+    file_name = output_filename(entry, fallback_idx=int(entry.get("playlist_index") or 0))
+    out_path = out_dir / file_name
+
+    grid_path = resolve_path((entry.get("paths") or {}).get("grid_image") if isinstance(entry.get("paths"), dict) else None)
+    if out_path.exists() and not args.force:
+        return {
+            "video_basename": entry.get("video_basename"),
+            "playlist_index": entry.get("playlist_index"),
+            "grid_image": relative_to_cwd(grid_path) if grid_path else None,
+            "json_path": relative_to_cwd(out_path),
+            "status": "ok",
+            "skipped": True,
+        }
+
+    frame_candidates = candidate_frame_paths(entry, max_frames=int(args.candidate_frames_max))
+    if not args.candidate_consensus and frame_candidates:
+        frame_candidates = frame_candidates[:1]
+
+    hypotheses: list[ZipHypothesis] = []
+    for frame_path in frame_candidates:
+        normalized = normalize_grid_from_frame(
+            frame_path,
+            line_detector=detect_grid_lines,
+            target_width=int(args.target_width),
+            min_area_ratio=float(args.min_quad_area_ratio),
+        )
+        if not normalized:
+            continue
+
+        hyp = _extract_zip_hypothesis(
+            entry=entry,
+            gray=normalized["gray"],
+            xs=normalized["xs"],
+            ys=normalized["ys"],
+            knn=knn,
+            frame_path=frame_path,
+            normalization_method=str(normalized["method"]),
+            quad_area_ratio=float(normalized["area_ratio"]),
+            solver_time_limit_s=float(args.solver_time_limit_s),
+        )
+        if hyp is not None:
+            hypotheses.append(hyp)
+
+    # Fallback to the legacy pre-cropped grid when frame-based normalization fails.
+    if not hypotheses and grid_path and grid_path.exists():
+        image = cv2.imread(str(grid_path), cv2.IMREAD_COLOR)
+        if image is not None:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            xs, ys = detect_grid_lines(gray)
+            hyp = _extract_zip_hypothesis(
+                entry=entry,
+                gray=gray,
+                xs=xs,
+                ys=ys,
+                knn=knn,
+                frame_path=grid_path,
+                normalization_method="precomputed_grid",
+                quad_area_ratio=0.0,
+                solver_time_limit_s=float(args.solver_time_limit_s),
+            )
+            if hyp is not None:
+                hypotheses.append(hyp)
+
+    if not hypotheses:
+        return {
+            "video_basename": entry.get("video_basename"),
+            "playlist_index": entry.get("playlist_index"),
+            "grid_image": relative_to_cwd(grid_path) if grid_path else None,
+            "status": "needs_review",
+            "error": "no valid hypotheses from candidate frames",
+        }
+
+    if args.candidate_consensus:
+        winner, consensus_info = pick_consensus_hypothesis(hypotheses)
+    else:
+        winner = max(hypotheses, key=lambda h: h.score)
+        consensus_info = {"mode": "best_score_only", "candidates": len(hypotheses)}
+
+    winner.payload.setdefault("meta", {})["consensus"] = consensus_info
+
     ensure_dir(out_path.parent)
-    dump_json(out_path, payload)
+    dump_json(out_path, winner.payload)
 
     status = "ok"
     reasons: list[str] = []
-    if assign_conf < 0.18:
+    if winner.recognition_confidence < 0.18:
         status = "needs_review"
-        reasons.append(f"low number recognition confidence ({assign_conf:.3f})")
+        reasons.append(f"low number recognition confidence ({winner.recognition_confidence:.3f})")
+    if not winner.parse_ok:
+        status = "needs_review"
+        reasons.append("failed zip parser constraints")
+    if winner.n <= 8 and not winner.solver_ok:
+        status = "needs_review"
+        reasons.append("failed zip solver constraints")
+
+    reasons.append(f"consensus_mode={consensus_info.get('mode')}")
+    reasons.append(f"hypotheses={consensus_info.get('candidates')}")
+    if "signature_agreement" in consensus_info:
+        reasons.append(f"signature_agreement={consensus_info['signature_agreement']}")
+    if "unique_signatures" in consensus_info:
+        reasons.append(f"unique_signatures={consensus_info['unique_signatures']}")
 
     return {
         "video_basename": entry.get("video_basename"),
@@ -852,11 +1020,11 @@ def convert_one(entry: dict, out_dir: Path, knn: cv2.ml_KNearest, force: bool = 
         "video_id": entry.get("video_id"),
         "puzzle_number": entry.get("puzzle_number"),
         "puzzle_date": entry.get("puzzle_date"),
-        "grid_image": relative_to_cwd(grid_path),
+        "grid_image": relative_to_cwd(winner.frame_path),
         "json_path": relative_to_cwd(out_path),
-        "n": int(n),
-        "checkpoint_count": len(numbers),
-        "recognition_confidence": round(assign_conf, 5),
+        "n": int(winner.n),
+        "checkpoint_count": len(winner.numbers),
+        "recognition_confidence": round(float(winner.recognition_confidence), 5),
         "status": status,
         "notes": reasons,
     }
@@ -887,7 +1055,7 @@ def main() -> int:
 
     results: list[dict] = []
     for idx, entry in enumerate(entries, start=1):
-        result = convert_one(entry, out_dir=out_dir, knn=knn, force=args.force)
+        result = convert_one(entry, out_dir=out_dir, knn=knn, args=args)
         results.append(result)
 
         if args.verbose:
