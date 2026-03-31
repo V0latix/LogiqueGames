@@ -6,7 +6,7 @@ Output schema:
   "game": "zip",
   "version": 1,
   "puzzles": [
-    {"id": 1, "source": "...", "n": 6, "numbers": [...], "walls": [...]}
+    {"id": 1, "source": "...", "name": "...", "n": 6, "numbers": [...], "walls": [...]}
   ]
 }
 """
@@ -43,6 +43,30 @@ def is_valid_puzzle_payload(payload: dict) -> bool:
     if not isinstance(payload.get("walls"), list):
         return False
     return True
+
+
+def infer_zip_name(entry: dict, payload: dict, json_path: Path) -> str:
+    meta = payload.get("meta", {}) if isinstance(payload.get("meta"), dict) else {}
+
+    # Keep the exact playlist/video basename when available so the web app can
+    # show the full original puzzle title provenance.
+    video_basename = entry.get("video_basename")
+    if isinstance(video_basename, str) and video_basename.strip():
+        return video_basename.strip()
+
+    meta_name = meta.get("name")
+    if isinstance(meta_name, str) and meta_name.strip():
+        return meta_name.strip()
+
+    puzzle_number = entry.get("puzzle_number") or meta.get("puzzle_number")
+    puzzle_date = entry.get("puzzle_date") or meta.get("puzzle_date")
+    if puzzle_number and puzzle_date:
+        return f"Zip #{puzzle_number} - {puzzle_date}"
+
+    if puzzle_number:
+        return f"Zip #{puzzle_number}"
+
+    return json_path.stem
 
 
 def main() -> int:
@@ -83,6 +107,7 @@ def main() -> int:
                 "playlist_index": entry.get("playlist_index"),
                 "json_path": json_path,
                 "payload": payload,
+                "entry": entry,
             }
         )
 
@@ -97,10 +122,13 @@ def main() -> int:
     puzzles: list[dict] = []
     for idx, item in enumerate(selected, start=1):
         payload = item["payload"]
+        entry = item["entry"]
+        json_path = item["json_path"]
         puzzles.append(
             {
                 "id": idx,
                 "source": args.source,
+                "name": infer_zip_name(entry, payload, json_path),
                 "n": int(payload["n"]),
                 "numbers": payload["numbers"],
                 "walls": payload["walls"],

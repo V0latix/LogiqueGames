@@ -6,6 +6,7 @@ type CellKey = string;
 
 type QueensPuzzle = {
   id: number;
+  name?: string;
   n: number;
   regions: number[][];
   givens: {
@@ -23,6 +24,7 @@ type QueensPuzzleNormalized = QueensPuzzle & {
 
 type ZipPuzzle = {
   id: number;
+  name?: string;
   n: number;
   numbers: { k: number; r: number; c: number }[];
   walls: { r1: number; c1: number; r2: number; c2: number }[];
@@ -175,6 +177,13 @@ function normalizeZipPuzzle(puzzle: ZipPuzzle): ZipPuzzleNormalized {
     wallsSet,
     neighbors,
   };
+}
+
+function puzzleName(game: 'queens' | 'zip', puzzle: { id: number; name?: string } | null): string {
+  if (!puzzle) return '';
+  const raw = puzzle.name?.trim();
+  if (raw) return raw;
+  return game === 'queens' ? `Queens #${puzzle.id}` : `Zip #${puzzle.id}`;
 }
 
 function computeQueensConflicts(puzzle: QueensPuzzleNormalized, queens: Set<CellKey>) {
@@ -617,6 +626,8 @@ export default function App() {
 
   const queensCountedRef = useRef<number | null>(null);
   const zipCountedRef = useRef<number | null>(null);
+  const queensPuzzleName = puzzleName('queens', queensPuzzle);
+  const zipPuzzleName = puzzleName('zip', zipPuzzle);
 
   useEffect(() => {
     let cancelled = false;
@@ -1188,6 +1199,11 @@ export default function App() {
                     </button>
                   </div>
                 )}
+                {queensPuzzle ? (
+                  <div className="panel-puzzle-name" title={queensPuzzleName}>
+                    {queensPuzzleName}
+                  </div>
+                ) : null}
                 <div className={`panel-status ${queensStatusType ?? ''}`}>{queensStatus}</div>
               </aside>
             </div>
@@ -1238,6 +1254,11 @@ export default function App() {
                     </button>
                   </div>
                 )}
+                {zipPuzzle ? (
+                  <div className="panel-puzzle-name" title={zipPuzzleName}>
+                    {zipPuzzleName}
+                  </div>
+                ) : null}
                 <div className={`panel-status ${zipStatusType ?? ''}`}>{zipStatus}</div>
               </aside>
             </div>

@@ -216,6 +216,19 @@ button.secondary:hover {
   color: var(--muted);
 }
 
+.panel-puzzle-name {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(123, 179, 255, 0.08);
+  border: 1px solid rgba(123, 179, 255, 0.3);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+  font-family: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
 .panel-status.ok {
   background: rgba(46, 125, 90, 0.2);
   border-color: rgba(82, 196, 136, 0.6);
