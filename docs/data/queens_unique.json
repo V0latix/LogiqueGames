@@ -1030,6 +1030,2115 @@
         "full_title": "LinkedIn Queens Answer Today - Puzzle #686 | 17 March 2026",
         "extraction_method": "manual_gpt_visual_from_chosen_frame"
       }
+    },
+    {
+      "id": 11,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#685 - 16/03/26",
+      "n": 7,
+      "regions": [
+        [
+          0,
+          1,
+          2,
+          2,
+          2,
+          3,
+          3
+        ],
+        [
+          0,
+          1,
+          4,
+          5,
+          2,
+          3,
+          3
+        ],
+        [
+          0,
+          2,
+          2,
+          2,
+          2,
+          2,
+          3
+        ],
+        [
+          0,
+          0,
+          0,
+          2,
+          6,
+          6,
+          6
+        ],
+        [
+          2,
+          0,
+          0,
+          2,
+          4,
+          6,
+          2
+        ],
+        [
+          2,
+          0,
+          0,
+          2,
+          4,
+          4,
+          2
+        ],
+        [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "011_h739nsqZ5hg_LinkedIn_Queens_Answer_Today_Puzzle_685_16_March_2026",
+        "video_id": "h739nsqZ5hg",
+        "playlist_index": 11,
+        "puzzle_number": 685,
+        "puzzle_date": "2026-03-16",
+        "source_url": "https://www.youtube.com/watch?v=h739nsqZ5hg",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/011_h739nsqZ5hg_LinkedIn_Queens_Answer_Today_Puzzle_685_16_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today \u2013 Puzzle #685 | 16 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 12,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#684 - 15/03/26",
+      "n": 9,
+      "regions": [
+        [
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          2,
+          2,
+          2
+        ],
+        [
+          0,
+          3,
+          3,
+          1,
+          1,
+          1,
+          2,
+          2,
+          2
+        ],
+        [
+          0,
+          3,
+          1,
+          1,
+          1,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          0,
+          1,
+          1,
+          1,
+          1,
+          4,
+          4,
+          4,
+          2
+        ],
+        [
+          5,
+          1,
+          1,
+          1,
+          1,
+          1,
+          4,
+          4,
+          4
+        ],
+        [
+          1,
+          1,
+          6,
+          7,
+          1,
+          1,
+          1,
+          4,
+          4
+        ],
+        [
+          5,
+          6,
+          6,
+          7,
+          7,
+          1,
+          1,
+          1,
+          4
+        ],
+        [
+          5,
+          5,
+          6,
+          8,
+          8,
+          8,
+          1,
+          1,
+          1
+        ],
+        [
+          5,
+          5,
+          5,
+          8,
+          8,
+          8,
+          8,
+          1,
+          1
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "012_8MK-9n3scSM_LinkedIn_Queens_Answer_Today_Puzzle_684_15_March_2026",
+        "video_id": "8MK-9n3scSM",
+        "playlist_index": 12,
+        "puzzle_number": 684,
+        "puzzle_date": "2026-03-15",
+        "source_url": "https://www.youtube.com/watch?v=8MK-9n3scSM",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/012_8MK-9n3scSM_LinkedIn_Queens_Answer_Today_Puzzle_684_15_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today \u2013 Puzzle #684 | 15 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 13,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#683 - 14/03/26",
+      "n": 8,
+      "regions": [
+        [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          2,
+          2
+        ],
+        [
+          3,
+          4,
+          4,
+          1,
+          5,
+          6,
+          2,
+          7
+        ],
+        [
+          0,
+          4,
+          4,
+          1,
+          5,
+          6,
+          2,
+          7
+        ],
+        [
+          0,
+          4,
+          4,
+          1,
+          5,
+          6,
+          2,
+          7
+        ],
+        [
+          0,
+          4,
+          4,
+          1,
+          3,
+          3,
+          2,
+          7
+        ],
+        [
+          4,
+          4,
+          3,
+          3,
+          3,
+          3,
+          3,
+          7
+        ],
+        [
+          4,
+          4,
+          4,
+          3,
+          3,
+          3,
+          3,
+          7
+        ],
+        [
+          4,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "013_gjnBWg9vy8c_LinkedIn_Queens_Answer_Today_Puzzle_683_14_March_2026",
+        "video_id": "gjnBWg9vy8c",
+        "playlist_index": 13,
+        "puzzle_number": 683,
+        "puzzle_date": "2026-03-14",
+        "source_url": "https://www.youtube.com/watch?v=gjnBWg9vy8c",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/013_gjnBWg9vy8c_LinkedIn_Queens_Answer_Today_Puzzle_683_14_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today \u2013 Puzzle #683 | 14 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 14,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#682 - 13/03/26",
+      "n": 9,
+      "regions": [
+        [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          2,
+          2,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          2,
+          2,
+          2
+        ],
+        [
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2
+        ],
+        [
+          0,
+          1,
+          1,
+          3,
+          4,
+          4,
+          1,
+          1,
+          2
+        ],
+        [
+          0,
+          1,
+          1,
+          3,
+          5,
+          5,
+          1,
+          1,
+          2
+        ],
+        [
+          0,
+          0,
+          1,
+          1,
+          5,
+          6,
+          1,
+          7,
+          7
+        ],
+        [
+          6,
+          0,
+          0,
+          1,
+          5,
+          1,
+          7,
+          7,
+          7
+        ],
+        [
+          6,
+          8,
+          0,
+          1,
+          5,
+          1,
+          7,
+          7,
+          7
+        ],
+        [
+          6,
+          8,
+          1,
+          1,
+          5,
+          1,
+          1,
+          7,
+          7
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "014_b8-KSia4FQQ_LinkedIn_Queens_Answer_Today_Puzzle_682_13_March_2026",
+        "video_id": "b8-KSia4FQQ",
+        "playlist_index": 14,
+        "puzzle_number": 682,
+        "puzzle_date": "2026-03-13",
+        "source_url": "https://www.youtube.com/watch?v=b8-KSia4FQQ",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/014_b8-KSia4FQQ_LinkedIn_Queens_Answer_Today_Puzzle_682_13_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today \u2013 Puzzle #682 | 13 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 15,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#681 - 12/03/26",
+      "n": 8,
+      "regions": [
+        [
+          0,
+          1,
+          2,
+          2,
+          2,
+          3,
+          3,
+          3
+        ],
+        [
+          1,
+          1,
+          2,
+          2,
+          2,
+          3,
+          3,
+          3
+        ],
+        [
+          1,
+          1,
+          1,
+          2,
+          2,
+          3,
+          3,
+          3
+        ],
+        [
+          4,
+          4,
+          4,
+          2,
+          2,
+          2,
+          5,
+          5
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5
+        ],
+        [
+          6,
+          6,
+          6,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        [
+          6,
+          6,
+          6,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        [
+          7,
+          6,
+          6,
+          5,
+          5,
+          5,
+          5,
+          3
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "015_fy_9EuOir1M_LinkedIn_Queens_Answer_Today_Puzzle_681_12_March_2026",
+        "video_id": "fy_9EuOir1M",
+        "playlist_index": 15,
+        "puzzle_number": 681,
+        "puzzle_date": "2026-03-12",
+        "source_url": "https://www.youtube.com/watch?v=fy_9EuOir1M",
+        "frame_timestamp": "00:00:00.000",
+        "chosen_frame": "queens_archive/candidates_head3/015_fy_9EuOir1M_LinkedIn_Queens_Answer_Today_Puzzle_681_12_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today \u2013 Puzzle #681 | 12 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 16,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#680 - 11/03/26",
+      "n": 8,
+      "regions": [
+        [
+          0,
+          1,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          0,
+          3,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          4,
+          3,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          4,
+          1,
+          1,
+          1,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          4,
+          4,
+          4,
+          4,
+          5,
+          6,
+          2,
+          2
+        ],
+        [
+          7,
+          7,
+          4,
+          4,
+          4,
+          6,
+          2,
+          2
+        ],
+        [
+          7,
+          7,
+          7,
+          7,
+          7,
+          6,
+          3,
+          3
+        ],
+        [
+          7,
+          7,
+          7,
+          7,
+          6,
+          6,
+          6,
+          3
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "016_t5Ojg2nasrA_LinkedIn_Queens_Answer_Today_Puzzle_680_11_March_2026",
+        "video_id": "t5Ojg2nasrA",
+        "playlist_index": 16,
+        "puzzle_number": 680,
+        "puzzle_date": "2026-03-11",
+        "source_url": "https://www.youtube.com/watch?v=t5Ojg2nasrA",
+        "frame_timestamp": "00:00:00.000",
+        "chosen_frame": "queens_archive/candidates_head3/016_t5Ojg2nasrA_LinkedIn_Queens_Answer_Today_Puzzle_680_11_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today \u2013 Puzzle #680 | 11 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 17,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#679 - 10/03/26",
+      "n": 8,
+      "regions": [
+        [
+          0,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          1,
+          1,
+          3,
+          4,
+          4,
+          5,
+          5,
+          5
+        ],
+        [
+          3,
+          3,
+          3,
+          4,
+          4,
+          5,
+          5,
+          5
+        ],
+        [
+          3,
+          3,
+          3,
+          4,
+          4,
+          5,
+          5,
+          5
+        ],
+        [
+          3,
+          3,
+          3,
+          4,
+          4,
+          5,
+          6,
+          7
+        ],
+        [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          6,
+          7
+        ],
+        [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          6,
+          7
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "017_XEQHJWkeW28_LinkedIn_Queens_Answer_Today_Puzzle_679_10_March_2026",
+        "video_id": "XEQHJWkeW28",
+        "playlist_index": 17,
+        "puzzle_number": 679,
+        "puzzle_date": "2026-03-10",
+        "source_url": "https://www.youtube.com/watch?v=XEQHJWkeW28",
+        "frame_timestamp": "00:00:00.000",
+        "chosen_frame": "queens_archive/candidates_head3/017_XEQHJWkeW28_LinkedIn_Queens_Answer_Today_Puzzle_679_10_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today \u2013 Puzzle #679 | 10 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 18,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#678 - 09/03/26",
+      "n": 7,
+      "regions": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1,
+          2,
+          2,
+          2,
+          0,
+          0
+        ],
+        [
+          1,
+          3,
+          2,
+          4,
+          2,
+          0,
+          5
+        ],
+        [
+          1,
+          3,
+          2,
+          2,
+          2,
+          0,
+          5
+        ],
+        [
+          1,
+          3,
+          6,
+          6,
+          2,
+          5,
+          5
+        ],
+        [
+          1,
+          3,
+          2,
+          2,
+          2,
+          5,
+          5
+        ],
+        [
+          1,
+          3,
+          3,
+          3,
+          3,
+          3,
+          5
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "018_kNmYzvnFAkw_LinkedIn_Queens_Answer_Today_Puzzle_678_09_March_2026",
+        "video_id": "kNmYzvnFAkw",
+        "playlist_index": 18,
+        "puzzle_number": 678,
+        "puzzle_date": "2026-03-09",
+        "source_url": "https://www.youtube.com/watch?v=kNmYzvnFAkw",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/018_kNmYzvnFAkw_LinkedIn_Queens_Answer_Today_Puzzle_678_09_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today \u2013 Puzzle #678 | 09 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 19,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#677 - 08/03/26",
+      "n": 9,
+      "regions": [
+        [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          2,
+          2,
+          2
+        ],
+        [
+          3,
+          0,
+          1,
+          1,
+          1,
+          1,
+          4,
+          2,
+          5
+        ],
+        [
+          3,
+          0,
+          3,
+          3,
+          1,
+          1,
+          6,
+          2,
+          5
+        ],
+        [
+          3,
+          0,
+          3,
+          6,
+          6,
+          6,
+          6,
+          2,
+          5
+        ],
+        [
+          3,
+          3,
+          3,
+          6,
+          6,
+          6,
+          6,
+          5,
+          5
+        ],
+        [
+          3,
+          7,
+          6,
+          6,
+          6,
+          6,
+          6,
+          4,
+          5
+        ],
+        [
+          8,
+          7,
+          6,
+          6,
+          6,
+          6,
+          6,
+          4,
+          5
+        ],
+        [
+          8,
+          7,
+          6,
+          6,
+          6,
+          6,
+          6,
+          4,
+          5
+        ],
+        [
+          7,
+          7,
+          7,
+          6,
+          6,
+          6,
+          4,
+          4,
+          4
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "019_v6qIuM8Nag8_LinkedIn_Queens_Answer_Today_Puzzle_677_08_March_2026",
+        "video_id": "v6qIuM8Nag8",
+        "playlist_index": 19,
+        "puzzle_number": 677,
+        "puzzle_date": "2026-03-08",
+        "source_url": "https://www.youtube.com/watch?v=v6qIuM8Nag8",
+        "frame_timestamp": "00:00:00.000",
+        "chosen_frame": "queens_archive/candidates_head3/019_v6qIuM8Nag8_LinkedIn_Queens_Answer_Today_Puzzle_677_08_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today \u2013 Puzzle #677 | 08 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 20,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#676 - 07/03/26",
+      "n": 8,
+      "regions": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          5,
+          5
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          4,
+          5,
+          5
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          3,
+          6,
+          6,
+          5
+        ],
+        [
+          0,
+          1,
+          2,
+          2,
+          6,
+          6,
+          5,
+          5
+        ],
+        [
+          0,
+          1,
+          1,
+          7,
+          6,
+          6,
+          5,
+          5
+        ],
+        [
+          0,
+          0,
+          7,
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        [
+          7,
+          7,
+          7,
+          7,
+          7,
+          6,
+          6,
+          7
+        ],
+        [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "020_baLflg5tlsc_LinkedIn_Queens_Answer_Today_Puzzle_676_07_March_2026",
+        "video_id": "baLflg5tlsc",
+        "playlist_index": 20,
+        "puzzle_number": 676,
+        "puzzle_date": "2026-03-07",
+        "source_url": "https://www.youtube.com/watch?v=baLflg5tlsc",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/020_baLflg5tlsc_LinkedIn_Queens_Answer_Today_Puzzle_676_07_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today \u2013 Puzzle #676 | 07 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 21,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#675 - 06/03/26",
+      "n": 9,
+      "regions": [
+        [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          0,
+          1,
+          1,
+          1,
+          3,
+          3,
+          3
+        ],
+        [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          4,
+          4,
+          3
+        ],
+        [
+          1,
+          5,
+          5,
+          6,
+          1,
+          1,
+          4,
+          4,
+          4
+        ],
+        [
+          1,
+          6,
+          5,
+          6,
+          1,
+          2,
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          6,
+          6,
+          6,
+          7,
+          7,
+          8,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1,
+          1,
+          7,
+          7,
+          8,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1,
+          1,
+          8,
+          8,
+          8,
+          1,
+          1
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "021_zmqNlNm0Ubc_LinkedIn_Queens_Answer_Today_Puzzle_675_06_March_2026",
+        "video_id": "zmqNlNm0Ubc",
+        "playlist_index": 21,
+        "puzzle_number": 675,
+        "puzzle_date": "2026-03-06",
+        "source_url": "https://www.youtube.com/watch?v=zmqNlNm0Ubc",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/021_zmqNlNm0Ubc_LinkedIn_Queens_Answer_Today_Puzzle_675_06_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today \u2013 Puzzle #675 | 06 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 22,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#674 - 05/03/26",
+      "n": 8,
+      "regions": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          0
+        ],
+        [
+          0,
+          1,
+          2,
+          2,
+          2,
+          2,
+          3,
+          0
+        ],
+        [
+          4,
+          4,
+          4,
+          2,
+          2,
+          2,
+          3,
+          0
+        ],
+        [
+          5,
+          4,
+          2,
+          6,
+          2,
+          3,
+          3,
+          3
+        ],
+        [
+          5,
+          4,
+          2,
+          2,
+          2,
+          7,
+          3,
+          7
+        ],
+        [
+          5,
+          5,
+          5,
+          5,
+          7,
+          7,
+          3,
+          7
+        ],
+        [
+          5,
+          5,
+          5,
+          5,
+          7,
+          7,
+          7,
+          7
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "022_x_HSLCrAa0U_LinkedIn_Queens_Answer_Today_-_Puzzle_674_5_March_2026",
+        "video_id": "x_HSLCrAa0U",
+        "playlist_index": 22,
+        "puzzle_number": 674,
+        "puzzle_date": "2026-03-05",
+        "source_url": "https://www.youtube.com/watch?v=x_HSLCrAa0U",
+        "frame_timestamp": "00:00:00.000",
+        "chosen_frame": "queens_archive/candidates_head3/022_x_HSLCrAa0U_LinkedIn_Queens_Answer_Today_-_Puzzle_674_5_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today - Puzzle #674 | 5 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 23,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#673 - 04/03/26",
+      "n": 8,
+      "regions": [
+        [
+          0,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          1,
+          1,
+          1,
+          2,
+          2,
+          3,
+          2,
+          4
+        ],
+        [
+          2,
+          1,
+          2,
+          2,
+          3,
+          3,
+          3,
+          2
+        ],
+        [
+          2,
+          2,
+          2,
+          2,
+          2,
+          3,
+          2,
+          2
+        ],
+        [
+          2,
+          2,
+          5,
+          2,
+          2,
+          6,
+          6,
+          6
+        ],
+        [
+          2,
+          5,
+          5,
+          5,
+          2,
+          6,
+          7,
+          6
+        ],
+        [
+          2,
+          2,
+          5,
+          2,
+          2,
+          7,
+          7,
+          7
+        ],
+        [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          7,
+          3
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "023_QBvqFvVR72k_LinkedIn_Queens_Answer_Today_-_Puzzle_673_4_March_2026",
+        "video_id": "QBvqFvVR72k",
+        "playlist_index": 23,
+        "puzzle_number": 673,
+        "puzzle_date": "2026-03-04",
+        "source_url": "https://www.youtube.com/watch?v=QBvqFvVR72k",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/023_QBvqFvVR72k_LinkedIn_Queens_Answer_Today_-_Puzzle_673_4_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today - Puzzle #673 | 4 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 24,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#672 - 03/03/26",
+      "n": 7,
+      "regions": [
+        [
+          0,
+          1,
+          1,
+          1,
+          1,
+          2,
+          0
+        ],
+        [
+          1,
+          1,
+          3,
+          3,
+          1,
+          1,
+          0
+        ],
+        [
+          1,
+          3,
+          3,
+          3,
+          3,
+          1,
+          0
+        ],
+        [
+          1,
+          3,
+          4,
+          4,
+          3,
+          1,
+          0
+        ],
+        [
+          1,
+          1,
+          5,
+          4,
+          4,
+          4,
+          0
+        ],
+        [
+          6,
+          1,
+          1,
+          1,
+          1,
+          4,
+          4
+        ],
+        [
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          4
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "024_T34zHeyUPq0_LinkedIn_Queens_Answer_Today_-_Puzzle_672_3_March_2026",
+        "video_id": "T34zHeyUPq0",
+        "playlist_index": 24,
+        "puzzle_number": 672,
+        "puzzle_date": "2026-03-03",
+        "source_url": "https://www.youtube.com/watch?v=T34zHeyUPq0",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/024_T34zHeyUPq0_LinkedIn_Queens_Answer_Today_-_Puzzle_672_3_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today - Puzzle #672 | 3 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 25,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#671 - 02/03/26",
+      "n": 7,
+      "regions": [
+        [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          2
+        ],
+        [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2
+        ],
+        [
+          1,
+          1,
+          1,
+          1,
+          3,
+          3,
+          3
+        ],
+        [
+          1,
+          1,
+          4,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          4,
+          4,
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          5,
+          5,
+          6,
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          1,
+          6,
+          6,
+          1,
+          1
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "025_WyUlLD9PnVs_LinkedIn_Queens_Answer_Today_-_Puzzle_671_2_March_2026",
+        "video_id": "WyUlLD9PnVs",
+        "playlist_index": 25,
+        "puzzle_number": 671,
+        "puzzle_date": "2026-03-02",
+        "source_url": "https://www.youtube.com/watch?v=WyUlLD9PnVs",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/025_WyUlLD9PnVs_LinkedIn_Queens_Answer_Today_-_Puzzle_671_2_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today - Puzzle #671 | 2 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 26,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#670 - 01/03/26",
+      "n": 8,
+      "regions": [
+        [
+          0,
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          0,
+          1,
+          1,
+          2,
+          3,
+          3,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          2,
+          2,
+          2,
+          2,
+          3,
+          3
+        ],
+        [
+          0,
+          0,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4
+        ],
+        [
+          5,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          4
+        ],
+        [
+          5,
+          5,
+          2,
+          2,
+          2,
+          2,
+          4,
+          6
+        ],
+        [
+          7,
+          5,
+          5,
+          5,
+          2,
+          4,
+          4,
+          6
+        ],
+        [
+          7,
+          7,
+          7,
+          4,
+          4,
+          4,
+          6,
+          6
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "026_Ex1UPrkLDew_LinkedIn_Queens_Answer_Today_-_Puzzle_670_1_March_2026",
+        "video_id": "Ex1UPrkLDew",
+        "playlist_index": 26,
+        "puzzle_number": 670,
+        "puzzle_date": "2026-03-01",
+        "source_url": "https://www.youtube.com/watch?v=Ex1UPrkLDew",
+        "frame_timestamp": "00:00:00.000",
+        "chosen_frame": "queens_archive/candidates_head3/026_Ex1UPrkLDew_LinkedIn_Queens_Answer_Today_-_Puzzle_670_1_March_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today - Puzzle #670 | 1 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 27,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#669 - 28/02/26",
+      "n": 9,
+      "regions": [
+        [
+          0,
+          1,
+          2,
+          2,
+          1,
+          1,
+          3,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          1,
+          2,
+          2,
+          1,
+          3,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          0,
+          1,
+          4,
+          4,
+          1,
+          1,
+          1,
+          5,
+          5
+        ],
+        [
+          6,
+          6,
+          6,
+          4,
+          1,
+          1,
+          5,
+          5,
+          6
+        ],
+        [
+          6,
+          6,
+          6,
+          4,
+          1,
+          6,
+          6,
+          6,
+          6
+        ],
+        [
+          7,
+          6,
+          6,
+          6,
+          6,
+          6,
+          8,
+          6,
+          6
+        ],
+        [
+          7,
+          7,
+          7,
+          6,
+          6,
+          8,
+          8,
+          6,
+          6
+        ],
+        [
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          8,
+          6,
+          6
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "027_AN2G5TOq2cs_LinkedIn_Queens_Answer_Today_-_Puzzle_669_28_February_2026",
+        "video_id": "AN2G5TOq2cs",
+        "playlist_index": 27,
+        "puzzle_number": 669,
+        "puzzle_date": "2026-02-28",
+        "source_url": "https://www.youtube.com/watch?v=AN2G5TOq2cs",
+        "frame_timestamp": "00:00:00.000",
+        "chosen_frame": "queens_archive/candidates_head3/027_AN2G5TOq2cs_LinkedIn_Queens_Answer_Today_-_Puzzle_669_28_February_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today - Puzzle #669 | 28 February 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 28,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#668 - 27/02/26",
+      "n": 9,
+      "regions": [
+        [
+          0,
+          1,
+          1,
+          1,
+          2,
+          2,
+          2,
+          2,
+          3
+        ],
+        [
+          0,
+          4,
+          5,
+          1,
+          2,
+          2,
+          6,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          1,
+          1,
+          2,
+          6,
+          6,
+          3,
+          3
+        ],
+        [
+          7,
+          7,
+          1,
+          2,
+          2,
+          2,
+          6,
+          3,
+          3
+        ],
+        [
+          7,
+          7,
+          1,
+          1,
+          8,
+          6,
+          6,
+          3,
+          3
+        ],
+        [
+          7,
+          7,
+          1,
+          8,
+          8,
+          8,
+          6,
+          3,
+          3
+        ],
+        [
+          7,
+          7,
+          1,
+          1,
+          8,
+          6,
+          6,
+          6,
+          3
+        ],
+        [
+          7,
+          7,
+          1,
+          8,
+          8,
+          6,
+          8,
+          6,
+          3
+        ],
+        [
+          7,
+          7,
+          7,
+          7,
+          8,
+          6,
+          6,
+          6,
+          3
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "028_KsVxqf1Eo1c_LinkedIn_Queens_Answer_Today_-_Puzzle_668_27_February_2026",
+        "video_id": "KsVxqf1Eo1c",
+        "playlist_index": 28,
+        "puzzle_number": 668,
+        "puzzle_date": "2026-02-27",
+        "source_url": "https://www.youtube.com/watch?v=KsVxqf1Eo1c",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/028_KsVxqf1Eo1c_LinkedIn_Queens_Answer_Today_-_Puzzle_668_27_February_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today - Puzzle #668 | 27 February 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 29,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#667 - 26/02/26",
+      "n": 7,
+      "regions": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1,
+          0,
+          0,
+          0,
+          2,
+          2
+        ],
+        [
+          1,
+          3,
+          3,
+          4,
+          5,
+          6,
+          2
+        ],
+        [
+          1,
+          3,
+          4,
+          4,
+          4,
+          6,
+          2
+        ],
+        [
+          1,
+          3,
+          3,
+          4,
+          6,
+          6,
+          2
+        ],
+        [
+          1,
+          1,
+          4,
+          4,
+          4,
+          2,
+          2
+        ],
+        [
+          1,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "029_MAuo3PjwIy0_LinkedIn_Queens_Answer_Today_-_Puzzle_667_26_February_2026",
+        "video_id": "MAuo3PjwIy0",
+        "playlist_index": 29,
+        "puzzle_number": 667,
+        "puzzle_date": "2026-02-26",
+        "source_url": "https://www.youtube.com/watch?v=MAuo3PjwIy0",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/029_MAuo3PjwIy0_LinkedIn_Queens_Answer_Today_-_Puzzle_667_26_February_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today - Puzzle #667 | 26 February 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
+    },
+    {
+      "id": 30,
+      "source": "youtube_manual_visual_gpt52_head3_batch2",
+      "name": "#666 - 25/02/26",
+      "n": 8,
+      "regions": [
+        [
+          0,
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          0,
+          0,
+          1,
+          1,
+          1,
+          2,
+          2,
+          1
+        ],
+        [
+          1,
+          1,
+          1,
+          3,
+          3,
+          2,
+          2,
+          1
+        ],
+        [
+          1,
+          4,
+          4,
+          3,
+          3,
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          4,
+          4,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          5,
+          5,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          1,
+          1,
+          5,
+          5,
+          1,
+          1,
+          6,
+          6
+        ],
+        [
+          7,
+          1,
+          1,
+          1,
+          1,
+          1,
+          6,
+          6
+        ]
+      ],
+      "givens": {
+        "queens": [],
+        "blocked": []
+      },
+      "meta": {
+        "video_basename": "030_YsBpdYcS3xE_LinkedIn_Queens_Answer_Today_-_Puzzle_666_25_February_2026",
+        "video_id": "YsBpdYcS3xE",
+        "playlist_index": 30,
+        "puzzle_number": 666,
+        "puzzle_date": "2026-02-25",
+        "source_url": "https://www.youtube.com/watch?v=YsBpdYcS3xE",
+        "frame_timestamp": "00:00:02.000",
+        "chosen_frame": "queens_archive/candidates_head3/030_YsBpdYcS3xE_LinkedIn_Queens_Answer_Today_-_Puzzle_666_25_February_2026/chosen_frame.png",
+        "full_title": "LinkedIn Queens Answer Today - Puzzle #666 | 25 February 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
+      }
     }
   ]
 }
