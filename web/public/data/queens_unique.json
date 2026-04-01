@@ -71,7 +71,7 @@
           3,
           3,
           6,
-          7,
+          4,
           4
         ],
         [
@@ -83,29 +83,29 @@
           6,
           6,
           4,
-          8
+          7
         ],
         [
           5,
           5,
           5,
           5,
-          7,
-          7,
+          8,
+          8,
           6,
-          8,
-          8
+          7,
+          7
         ],
         [
           5,
           5,
           5,
           5,
-          7,
-          7,
           8,
           8,
-          8
+          7,
+          7,
+          7
         ]
       ],
       "givens": {
@@ -121,7 +121,8 @@
         "source_url": "https://www.youtube.com/watch?v=lU40fUifFDM",
         "frame_timestamp": "00:00:01.500",
         "chosen_frame": "queens_archive/candidates_head3_fresh/001_lU40fUifFDM_LinkedIn_Queens_Answer_Today_26_March_2026_-_Puzzle_695/chosen_frame.png",
-        "full_title": "LinkedIn Queens Answer Today | 26 March 2026 - Puzzle #695"
+        "full_title": "LinkedIn Queens Answer Today | 26 March 2026 - Puzzle #695",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
       }
     },
     {
@@ -132,83 +133,83 @@
       "regions": [
         [
           0,
-          1,
-          1,
-          2,
-          2,
-          2,
-          3,
-          0
-        ],
-        [
+          0,
+          0,
           1,
           1,
           1,
           2,
-          2,
-          2,
-          3,
-          0
+          3
         ],
         [
           0,
           0,
           0,
-          3,
-          3,
-          3,
-          3,
-          0
+          1,
+          1,
+          1,
+          2,
+          3
         ],
         [
-          0,
+          3,
+          3,
+          3,
+          2,
+          2,
+          2,
+          2,
+          3
+        ],
+        [
+          3,
           4,
           4,
           5,
           5,
+          2,
+          2,
+          3
+        ],
+        [
+          3,
+          4,
+          4,
+          4,
+          4,
           3,
           3,
-          0
+          3
         ],
         [
-          0,
-          4,
-          4,
-          4,
-          4,
-          0,
-          0,
-          0
-        ],
-        [
-          0,
+          3,
           4,
           6,
           6,
           6,
-          0,
-          0,
-          0
+          3,
+          3,
+          3
         ],
         [
-          0,
-          0,
+          3,
+          3,
           7,
           7,
           7,
-          0,
-          0,
-          0
+          3,
+          3,
+          3
         ],
         [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3
         ]
       ],
       "givens": {
@@ -224,7 +225,8 @@
         "source_url": "https://www.youtube.com/watch?v=gbCvQCwqOSk",
         "frame_timestamp": "00:00:00.000",
         "chosen_frame": "queens_archive/candidates_head3_fresh/002_gbCvQCwqOSk_LinkedIn_Queens_Answer_Today_25_March_2026_-_Puzzle_694/chosen_frame.png",
-        "full_title": "LinkedIn Queens Answer Today | 25 March 2026 - Puzzle #694"
+        "full_title": "LinkedIn Queens Answer Today | 25 March 2026 - Puzzle #694",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
       }
     },
     {
@@ -265,7 +267,7 @@
           3,
           3,
           3,
-          5,
+          3,
           3,
           0
         ],
@@ -276,7 +278,7 @@
           3,
           3,
           3,
-          2
+          5
         ],
         [
           4,
@@ -284,17 +286,17 @@
           6,
           6,
           6,
-          2,
-          2
+          5,
+          5
         ],
         [
           4,
           4,
           4,
           6,
-          2,
-          2,
-          2
+          5,
+          5,
+          5
         ]
       ],
       "givens": {
@@ -310,7 +312,8 @@
         "source_url": "https://www.youtube.com/watch?v=uaVlAlevIlY",
         "frame_timestamp": "00:00:00.000",
         "chosen_frame": "queens_archive/candidates_head3_fresh/003_uaVlAlevIlY_LinkedIn_Queens_Answer_Today_24_March_2026_-_Puzzle_693/chosen_frame.png",
-        "full_title": "LinkedIn Queens Answer Today | 24 March 2026 - Puzzle #693"
+        "full_title": "LinkedIn Queens Answer Today | 24 March 2026 - Puzzle #693",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
       }
     },
     {
@@ -367,20 +370,20 @@
         [
           0,
           0,
-          6,
-          4,
           3,
-          4,
-          4
+          6,
+          3,
+          6,
+          6
         ],
         [
           0,
           0,
-          4,
-          4,
-          4,
-          4,
-          4
+          6,
+          6,
+          6,
+          6,
+          6
         ]
       ],
       "givens": {
@@ -396,7 +399,8 @@
         "source_url": "https://www.youtube.com/watch?v=C-snNwdSthI",
         "frame_timestamp": "00:00:02.500",
         "chosen_frame": "queens_archive/candidates_head3_fresh/004_C-snNwdSthI_LinkedIn_Queens_Answer_Today_23_March_2026_-_Puzzle_692/chosen_frame.png",
-        "full_title": "LinkedIn Queens Answer Today | 23 March 2026 - Puzzle #692"
+        "full_title": "LinkedIn Queens Answer Today | 23 March 2026 - Puzzle #692",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
       }
     },
     {
@@ -414,95 +418,95 @@
           2,
           2,
           2,
-          3
-        ],
-        [
-          1,
-          1,
-          4,
-          1,
-          1,
-          2,
-          5,
-          5,
-          2
-        ],
-        [
-          1,
-          4,
-          4,
-          4,
-          1,
-          2,
-          5,
-          5,
           2
         ],
         [
           1,
           1,
+          3,
+          1,
+          1,
+          2,
           4,
-          1,
-          1,
-          2,
-          2,
-          5,
+          4,
           2
         ],
         [
+          1,
+          3,
+          3,
+          3,
+          1,
+          2,
+          4,
+          4,
+          2
+        ],
+        [
+          1,
+          1,
+          3,
+          1,
+          1,
+          2,
+          2,
+          4,
+          2
+        ],
+        [
+          5,
+          1,
+          1,
+          1,
           6,
-          1,
-          1,
-          1,
+          4,
+          4,
+          4,
+          2
+        ],
+        [
+          5,
+          5,
+          5,
+          5,
+          4,
+          4,
           7,
-          5,
-          5,
-          5,
-          2
+          4,
+          4
         ],
         [
-          6,
-          6,
-          6,
-          6,
           5,
-          5,
-          8,
-          5,
-          5
+          4,
+          4,
+          4,
+          4,
+          7,
+          7,
+          7,
+          4
         ],
         [
-          6,
           5,
+          4,
+          4,
           5,
-          5,
-          5,
-          8,
-          8,
-          8,
-          5
+          4,
+          4,
+          7,
+          4,
+          4
         ],
         [
-          6,
-          5,
-          5,
-          6,
-          5,
-          5,
-          8,
-          5,
-          5
-        ],
-        [
-          6,
-          6,
-          6,
-          6,
-          6,
           5,
           5,
           5,
-          0
+          5,
+          5,
+          4,
+          4,
+          4,
+          8
         ]
       ],
       "givens": {
@@ -518,7 +522,8 @@
         "source_url": "https://www.youtube.com/watch?v=7M1H2_mHTt4",
         "frame_timestamp": "00:00:00.000",
         "chosen_frame": "queens_archive/candidates_head3_fresh/005_7M1H2_mHTt4_LinkedIn_Queens_Answer_Today_22_March_2026_-_Puzzle_691/chosen_frame.png",
-        "full_title": "LinkedIn Queens Answer Today | 22 March 2026 - Puzzle #691"
+        "full_title": "LinkedIn Queens Answer Today | 22 March 2026 - Puzzle #691",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
       }
     },
     {
@@ -536,95 +541,95 @@
           1,
           1,
           2,
-          3
+          2
         ],
         [
           0,
           0,
           1,
-          4,
-          4,
-          4,
+          3,
+          3,
+          3,
           1,
-          5,
-          3
+          4,
+          2
         ],
         [
-          6,
-          6,
-          1,
-          4,
-          1,
-          4,
-          1,
           5,
-          3
+          5,
+          1,
+          3,
+          1,
+          3,
+          1,
+          4,
+          2
         ],
         [
-          6,
-          6,
+          5,
+          5,
           1,
           1,
+          1,
+          3,
           1,
           4,
-          1,
-          5,
-          3
+          2
         ],
         [
-          6,
-          6,
-          6,
-          1,
-          4,
-          4,
-          1,
           5,
-          7
+          5,
+          5,
+          1,
+          3,
+          3,
+          1,
+          4,
+          6
         ],
         [
-          6,
-          6,
-          6,
+          5,
+          5,
+          5,
+          1,
+          3,
+          1,
           1,
           4,
-          1,
-          1,
-          5,
-          7
+          6
         ],
         [
-          6,
+          5,
+          7,
+          5,
+          1,
+          1,
+          1,
+          4,
+          4,
+          6
+        ],
+        [
+          7,
+          7,
+          5,
+          1,
           8,
-          6,
           1,
-          1,
-          1,
-          5,
-          5,
-          7
+          4,
+          4,
+          6
         ],
         [
-          8,
-          8,
-          6,
-          1,
-          8,
-          1,
+          7,
           5,
           5,
-          7
-        ],
-        [
-          8,
-          6,
-          6,
           1,
           1,
           1,
-          5,
-          5,
-          7
+          4,
+          4,
+          6
         ]
       ],
       "givens": {
@@ -640,7 +645,8 @@
         "source_url": "https://www.youtube.com/watch?v=8P9U0d6EQYA",
         "frame_timestamp": "00:00:02.000",
         "chosen_frame": "queens_archive/candidates_head3_fresh/006_8P9U0d6EQYA_LinkedIn_Queens_Answer_Today_21_March_2026_-_Puzzle_690/chosen_frame.png",
-        "full_title": "LinkedIn Queens Answer Today | 21 March 2026 - Puzzle #690"
+        "full_title": "LinkedIn Queens Answer Today | 21 March 2026 - Puzzle #690",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
       }
     },
     {
@@ -743,7 +749,8 @@
         "source_url": "https://www.youtube.com/watch?v=hcl5zNlChw8",
         "frame_timestamp": "00:00:00.500",
         "chosen_frame": "queens_archive/candidates_head3_fresh/007_hcl5zNlChw8_LinkedIn_Queens_Answer_Today_20_March_2026_-_Puzzle_689/chosen_frame.png",
-        "full_title": "LinkedIn Queens Answer Today | 20 March 2026 - Puzzle #689"
+        "full_title": "LinkedIn Queens Answer Today | 20 March 2026 - Puzzle #689",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
       }
     },
     {
@@ -764,10 +771,10 @@
         [
           2,
           0,
-          3,
           1,
-          4,
-          4,
+          1,
+          3,
+          3,
           1
         ],
         [
@@ -776,7 +783,7 @@
           1,
           1,
           1,
-          4,
+          3,
           1
         ],
         [
@@ -785,34 +792,34 @@
           0,
           1,
           1,
-          4,
+          3,
           1
         ],
         [
-          5,
+          4,
           0,
+          5,
+          5,
           3,
           3,
-          4,
-          4,
-          4
+          3
         ],
         [
-          5,
-          0,
-          3,
-          3,
-          3,
           4,
+          0,
+          5,
+          5,
+          5,
+          3,
           6
         ],
         [
-          5,
-          5,
-          5,
-          3,
-          3,
           4,
+          4,
+          4,
+          5,
+          5,
+          3,
           6
         ]
       ],
@@ -829,7 +836,8 @@
         "source_url": "https://www.youtube.com/watch?v=IFE84KvTlCA",
         "frame_timestamp": "00:00:00.000",
         "chosen_frame": "queens_archive/candidates_head3_fresh/008_IFE84KvTlCA_LinkedIn_Queens_Answer_Today_19_March_2026_-_Puzzle_688/chosen_frame.png",
-        "full_title": "LinkedIn Queens Answer Today | 19 March 2026 - Puzzle #688"
+        "full_title": "LinkedIn Queens Answer Today | 19 March 2026 - Puzzle #688",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
       }
     },
     {
@@ -932,7 +940,8 @@
         "source_url": "https://www.youtube.com/watch?v=wspOe2Zfvb0",
         "frame_timestamp": "00:00:00.000",
         "chosen_frame": "queens_archive/candidates_head3_fresh/009_wspOe2Zfvb0_LinkedIn_Queens_Answer_Today_-_Puzzle_687_18_March_2026/chosen_frame.png",
-        "full_title": "LinkedIn Queens Answer Today - Puzzle #687 | 18 March 2026"
+        "full_title": "LinkedIn Queens Answer Today - Puzzle #687 | 18 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
       }
     },
     {
@@ -963,17 +972,17 @@
           0,
           0,
           2,
-          3,
-          3,
+          2,
+          2,
           0,
           0
         ],
         [
           0,
-          2,
-          2,
-          2,
-          2,
+          3,
+          3,
+          3,
+          3,
           0,
           0
         ],
@@ -1018,7 +1027,8 @@
         "source_url": "https://www.youtube.com/watch?v=TOO5TQ_HM3A",
         "frame_timestamp": "00:00:00.000",
         "chosen_frame": "queens_archive/candidates_head3_fresh/010_TOO5TQ_HM3A_LinkedIn_Queens_Answer_Today_-_Puzzle_686_17_March_2026/chosen_frame.png",
-        "full_title": "LinkedIn Queens Answer Today - Puzzle #686 | 17 March 2026"
+        "full_title": "LinkedIn Queens Answer Today - Puzzle #686 | 17 March 2026",
+        "extraction_method": "manual_gpt_visual_from_chosen_frame"
       }
     }
   ]
